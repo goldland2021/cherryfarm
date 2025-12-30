@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTelegramUserId } from '../lib/useTelegramUser'
 import { hasPickedToday, pickCherry } from '../lib/cherryService'
-const userId = getTelegramUserId()
+
 
 export default function CherryTree() {
   // Telegram 用户（本地浏览器为 null）
@@ -101,6 +101,11 @@ export default function CherryTree() {
       <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>
   Telegram User ID: {userId ?? '未获取'}
 </div>
+<div style={{ fontSize: 10, opacity: 0.4, marginTop: 8 }}>
+  Telegram object: {window.Telegram ? 'YES' : 'NO'} <br />
+  WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NO'}
+</div>
+
 
       {/* 调试信息（可保留或删除） */}
       <div style={{ fontSize: 10, marginTop: 4, opacity: 0.3 }}>
