@@ -103,8 +103,8 @@ export default function CherryTree() {
         Telegram User ID: {userId ?? '未获取'}
       </div>
       <div style={{ fontSize: 10, marginTop: 4, opacity: 0.3 }}>
-        Telegram object: {window.Telegram ? 'YES' : 'NO'} <br />
-        WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NO'}
+        Telegram object: {window.Telegram ? 'YES' : 'NOwhy'} <br />
+        WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NOwhy'}
       </div>
     </div>
   )
