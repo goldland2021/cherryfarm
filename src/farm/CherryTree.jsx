@@ -2,18 +2,18 @@ import { useState, useEffect } from 'react'
 import { getTelegramUserId } from '../lib/useTelegramUser'
 import { hasPickedToday, pickCherry } from '../lib/cherryService'
 
-
 export default function CherryTree() {
-  // Telegram 用户（本地浏览器为 null）
-  const userId = getTelegramUserId()
-
-  // 是否已经摘过
+  const [userId, setUserId] = useState(null)
   const [picked, setPicked] = useState(false)
-
-  // 加载状态（避免闪烁）
   const [loading, setLoading] = useState(true)
 
-  // 页面加载时检查今天是否已经摘过
+  // 页面加载后安全获取 Telegram User ID
+  useEffect(() => {
+    const tgUserId = getTelegramUserId()
+    setUserId(tgUserId)
+  }, [])
+
+  // 检查今天是否已摘
   useEffect(() => {
     let alive = true
 
@@ -35,7 +35,6 @@ export default function CherryTree() {
     }
 
     checkStatus()
-
     return () => {
       alive = false
     }
@@ -59,18 +58,18 @@ export default function CherryTree() {
 
   return (
     <div style={{ textAlign: 'center' }}>
-      {/* 🌳 树 */}
+      {/* 树 */}
       <div style={{ fontSize: 120, marginBottom: 10 }}>🌳</div>
 
-      {/* 操作区 */}
+      {/* 按钮区 */}
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         <button
           disabled={loading || picked || !userId}
           onClick={handlePick}
           style={{
             padding: '6px 12px',
-            opacity: loading || picked ? 0.5 : 1,
-            cursor: loading || picked ? 'not-allowed' : 'pointer',
+            opacity: loading || picked || !userId ? 0.5 : 1,
+            cursor: loading || picked || !userId ? 'not-allowed' : 'pointer',
           }}
         >
           {loading
@@ -98,18 +97,14 @@ export default function CherryTree() {
             : '今天还可以摘一颗 🍒'
           : '请从 Telegram 打开本页面'}
       </div>
+
+      {/* 调试信息 */}
       <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>
-  Telegram User ID: {userId ?? '未获取'}
-</div>
-<div style={{ fontSize: 10, opacity: 0.4, marginTop: 8 }}>
-  Telegram object: {window.Telegram ? 'YES' : 'NO'} <br />
-  WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NO'}
-</div>
-
-
-      {/* 调试信息（可保留或删除） */}
+        Telegram User ID: {userId ?? '未获取'}
+      </div>
       <div style={{ fontSize: 10, marginTop: 4, opacity: 0.3 }}>
-        userId: {userId ?? 'no telegram'}
+        Telegram object: {window.Telegram ? 'YES' : 'NO'} <br />
+        WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NO'}
       </div>
     </div>
   )
