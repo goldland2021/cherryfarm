@@ -1,0 +1,16 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont;
+    background: linear-gradient(#87ceeb, #e8f7e4);
+    min-height: 100vh;
+  }
+  
+  #root {
+    min-height: 100vh;
+  }
+  
