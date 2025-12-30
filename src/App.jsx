@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import FarmScene from './farm/FarmScene'
 
 export default function App() {
   useEffect(() => {
