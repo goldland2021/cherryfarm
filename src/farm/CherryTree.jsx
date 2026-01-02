@@ -7,13 +7,17 @@ export default function CherryTree() {
   const [picked, setPicked] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 只在组件挂载时读取 Telegram
+  // 广告状态
+  const [adWatched, setAdWatched] = useState(false)
+  const [watchingAd, setWatchingAd] = useState(false)
+
+  // 获取 Telegram User
   useEffect(() => {
     const id = getTelegramUserId()
     setUserId(id)
   }, [])
 
-  // 有 userId 后再查 Supabase
+  // 查询今天是否已摘
   useEffect(() => {
     if (!userId) {
       setLoading(false)
@@ -37,8 +41,22 @@ export default function CherryTree() {
     return () => (alive = false)
   }, [userId])
 
+  // 模拟看广告（后面直接替换成真实广告 SDK）
+  async function watchAd() {
+    if (watchingAd || adWatched) return
+
+    setWatchingAd(true)
+
+    // ⏳ 模拟广告 5 秒
+    setTimeout(() => {
+      setWatchingAd(false)
+      setAdWatched(true)
+    }, 5000)
+  }
+
   async function handlePick() {
-    if (!userId || picked || loading) return
+    if (!userId || picked || loading || !adWatched) return
+
     setLoading(true)
     await pickCherry(userId)
     setPicked(true)
@@ -46,30 +64,76 @@ export default function CherryTree() {
   }
 
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 120 }}>🌳</div>
+    <div
+      style={{
+        maxWidth: 360,
+        margin: '0 auto',
+        padding: 16,
+        textAlign: 'center',
+      }}
+    >
+      {/* 🌳 树 */}
+      <div style={{ fontSize: 120, marginBottom: 8 }}>🌳</div>
 
+      {/* 状态文案 */}
+      <div style={{ marginBottom: 12, fontSize: 14, opacity: 0.8 }}>
+        {picked
+          ? '今天已经摘过樱桃啦 🍒'
+          : adWatched
+          ? '广告已完成，可以摘樱桃了'
+          : '观看广告即可摘一颗樱桃'}
+      </div>
+
+      {/* 🎬 看广告按钮 */}
+      {!picked && !adWatched && (
+        <button
+          onClick={watchAd}
+          disabled={!userId || watchingAd}
+          style={{
+            width: '100%',
+            padding: '12px 0',
+            borderRadius: 12,
+            border: 'none',
+            background: '#ffb703',
+            color: '#000',
+            fontSize: 16,
+            fontWeight: 'bold',
+            marginBottom: 10,
+          }}
+        >
+          {watchingAd ? '📺 广告播放中…' : '🎬 看广告'}
+        </button>
+      )}
+
+      {/* 🍒 摘樱桃按钮 */}
       <button
-        disabled={!userId || picked || loading}
+        disabled={!userId || picked || loading || !adWatched}
         onClick={handlePick}
+        style={{
+          width: '100%',
+          padding: '14px 0',
+          borderRadius: 14,
+          border: 'none',
+          background: picked ? '#adb5bd' : '#e63946',
+          color: '#fff',
+          fontSize: 18,
+          fontWeight: 'bold',
+          opacity: !adWatched && !picked ? 0.5 : 1,
+        }}
       >
         {loading
-          ? '⏳ 加载中'
+          ? '⏳ 处理中…'
           : !userId
           ? '🚫 请在 Telegram 打开'
           : picked
-          ? '✅ 今天已摘'
-          : '🍒 摘一颗'}
+          ? '✅ 今日已摘'
+          : '🍒 摘一颗樱桃'}
       </button>
 
-      <div style={{ fontSize: 12, marginTop: 8 }}>
-        Telegram User ID: {userId ?? '未获取'}
-      </div>
-
-      {/* 调试信息 */}
-      <div style={{ fontSize: 10, opacity: 0.4 }}>
-        Telegram object: {window.Telegram ? 'YES' : 'NO'} <br />
-        WebApp object: {window.Telegram?.WebApp ? 'YES' : 'NO'}
+      {/* 调试信息（开发期保留） */}
+      <div style={{ fontSize: 10, marginTop: 12, opacity: 0.4 }}>
+        UID: {userId ?? '未获取'} <br />
+        Telegram: {window.Telegram ? 'YES' : 'NO'}
       </div>
     </div>
   )
