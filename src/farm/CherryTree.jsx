@@ -6,12 +6,13 @@ export default function CherryTree() {
   const [userId, setUserId] = useState(null)
   const [picked, setPicked] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [cherryCount, setCherryCount] = useState(42) // 初始樱桃数量
 
   // 广告状态
   const [adWatched, setAdWatched] = useState(false)
   const [watchingAd, setWatchingAd] = useState(false)
 
-  // 游戏状态（根据设计图）
+  // 游戏状态
   const [coins, setCoins] = useState(150)
   const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(5)
@@ -46,17 +47,15 @@ export default function CherryTree() {
     return () => (alive = false)
   }, [userId])
 
-  // 模拟看广告（后面直接替换成真实广告 SDK）
+  // 模拟看广告
   async function watchAd() {
     if (watchingAd || adWatched) return
 
     setWatchingAd(true)
 
-    // ⏳ 模拟广告 5 秒
     setTimeout(() => {
       setWatchingAd(false)
       setAdWatched(true)
-      // 看广告奖励硬币
       setCoins(prev => prev + 50)
     }, 5000)
   }
@@ -68,8 +67,9 @@ export default function CherryTree() {
     await pickCherry(userId)
     setPicked(true)
     setLoading(false)
-    // 摘樱桃奖励硬币
     setCoins(prev => prev + 25)
+    // 摘樱桃增加樱桃数量
+    setCherryCount(prev => prev + 1)
   }
 
   // 导航按钮处理
@@ -89,7 +89,7 @@ export default function CherryTree() {
         fontFamily: 'Arial, sans-serif',
       }}
     >
-      {/* 顶部游戏状态栏 */}
+      {/* 顶部游戏状态栏 - 重新布局 */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -100,22 +100,7 @@ export default function CherryTree() {
         borderRadius: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{
-            width: '24px',
-            height: '24px',
-            backgroundColor: '#FFD700',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: '8px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-          }}>💰</div>
-          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>Coins: {coins}</span>
-        </div>
-        
+        {/* 左侧：生命值 */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{
             width: '24px',
@@ -130,7 +115,65 @@ export default function CherryTree() {
             fontWeight: 'bold',
             color: '#fff'
           }}>❤️</div>
-          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>Lives: {lives}</span>
+          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{lives}</span>
+        </div>
+
+        {/* 中央：樱桃数量 */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 1,
+          margin: '0 15px',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFEBEE',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            border: '2px solid #FFCDD2',
+            minWidth: '120px',
+          }}>
+            <span style={{
+              fontSize: '24px',
+              marginRight: '8px',
+              display: 'block',
+            }}>🍒</span>
+            <span style={{
+              fontWeight: 'bold',
+              fontSize: '20px',
+              color: '#D32F2F',
+              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            }}>{cherryCount}</span>
+          </div>
+          <div style={{
+            fontSize: '12px',
+            color: '#666',
+            marginTop: '4px',
+            fontWeight: '500',
+          }}>
+            Cherry Count
+          </div>
+        </div>
+
+        {/* 右侧：金币 */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            backgroundColor: '#FFD700',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: '8px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+          }}>💰</div>
+          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{coins}</span>
         </div>
       </div>
 
@@ -313,7 +356,7 @@ export default function CherryTree() {
         ))}
       </div>
 
-      {/* 调试信息（开发期保留） */}
+      {/* 调试信息 */}
       <div style={{ 
         fontSize: '10px', 
         marginTop: '12px', 
