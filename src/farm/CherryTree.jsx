@@ -9,25 +9,21 @@ export default function CherryTree() {
   const [loading, setLoading] = useState(true)
   const [cherries, setCherries] = useState(0)
 
-  // 获取 Telegram 用户
   useEffect(() => {
     setUserId(getTelegramUserId())
   }, [])
 
-  // 是否今天已摘
   useEffect(() => {
     if (!userId) {
       setLoading(false)
       return
     }
-
-    hasPickedToday(userId).then(result => {
-      setPicked(result)
+    hasPickedToday(userId).then(r => {
+      setPicked(r)
       setLoading(false)
     })
   }, [userId])
 
-  // 免费摘
   const handlePick = async () => {
     if (picked || loading) return
     setLoading(true)
@@ -37,7 +33,6 @@ export default function CherryTree() {
     setLoading(false)
   }
 
-  // 广告摘（假广告）
   const handleAdPick = () => {
     if (adPicked) return
     setAdPicked(true)
@@ -45,65 +40,53 @@ export default function CherryTree() {
   }
 
   return (
-    <div style={styles.page}>
-      {/* 樱桃数量 */}
-      <div style={styles.count}>
-        🍒 {cherries}
-      </div>
+    <div style={styles.wrap}>
+      <div style={styles.count}>🍒 {cherries}</div>
 
-      {/* 樱桃树 */}
       <div style={styles.tree}>🌳</div>
 
-      {/* 免费按钮 */}
       {!picked && (
         <button style={styles.button} onClick={handlePick}>
           点击摘樱桃
         </button>
       )}
 
-      {/* 广告按钮 */}
       {picked && !adPicked && (
         <button style={styles.button} onClick={handleAdPick}>
           看广告再摘一次
         </button>
       )}
 
-      {/* 今日结束 */}
       {picked && adPicked && (
-        <div style={styles.done}>今天摘完了</div>
+        <div style={styles.done}>今天结束</div>
       )}
     </div>
   )
 }
 
 const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#0f172a',
-    color: '#fff',
+  wrap: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '24px',
-    fontSize: '20px',
+    gap: '20px',
+    padding: '40px 0',
   },
   count: {
-    fontSize: '28px',
+    fontSize: '24px',
     fontWeight: 'bold',
   },
   tree: {
     fontSize: '120px',
   },
   button: {
-    padding: '16px 32px',
-    fontSize: '18px',
-    borderRadius: '12px',
-    border: 'none',
+    padding: '14px 28px',
+    fontSize: '16px',
+    borderRadius: '10px',
     cursor: 'pointer',
   },
   done: {
+    fontSize: '14px',
     opacity: 0.6,
-    fontSize: '16px',
   },
 }
