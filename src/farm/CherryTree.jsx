@@ -1,51 +1,65 @@
 import { useEffect, useState } from 'react'
-import { getOrCreateUser } from '../lib/useTelegramUser'
-import { pickCherry, hasPickedToday } from '../lib/cherryService'
+import { useTelegramUser } from '../lib/useTelegramUser'
+import { hasPickedToday, pickCherry } from '../lib/cherryService'
 
 export default function CherryTree() {
   const [user, setUser] = useState(null)
-  const [cherries, setCherries] = useState(0)
   const [picked, setPicked] = useState(false)
+  const [cherries, setCherries] = useState(0)
   const [loading, setLoading] = useState(true)
 
+  // 获取 Telegram 用户信息
   useEffect(() => {
-    async function init() {
-      const u = await getOrCreateUser()
-      if (!u) {
-        setLoading(false)
-        return
-      }
-      setUser(u)
+    const tgUser = useTelegramUser()
+    setUser(tgUser)
+  }, [])
 
-      const pickedToday = await hasPickedToday(u.id)
-      setPicked(pickedToday)
+  // 查询今天是否已摘
+  useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
-      // 如果已经摘过就统计总数
-      if (pickedToday) {
-        const { length } = await fetchCherries(u.id)
-        setCherries(length)
-      }
+    let alive = true
+
+    async function checkPicked() {
+      const result = await hasPickedToday(user)
+      if (alive) setPicked(result)
+
+      // 同步显示总樱桃数
+      const total = await fetchTotalCherries(user)
+      if (alive) setCherries(total)
 
       setLoading(false)
     }
 
-    async function fetchCherries(userId) {
-      const { data, error } = await window.supabase
-        .from('cherry_picks')
-        .select('id')
-        .eq('user_id', userId)
-      if (error) return { length: 0 }
-      return { length: data?.length ?? 0 }
-    }
+    checkPicked()
+    return () => (alive = false)
+  }, [user])
 
-    init()
-  }, [])
+  async function fetchTotalCherries(user) {
+    const { count, error } = await pickCherryCount(user)
+    return count ?? 0
+  }
+
+  // 新增函数: 只获取总樱桃数，不插入
+  async function pickCherryCount(user) {
+    const { count, error } = await import('../lib/supabaseClient').then(m =>
+      m.supabase
+        .from('cherry_picks')
+        .select('id', { head: true, count: 'exact' })
+        .eq('user_id', user.id)
+    )
+    return { count, error }
+  }
 
   async function handlePick() {
     if (!user || picked || loading) return
+
     setLoading(true)
     try {
-      const total = await pickCherry(user.id)
+      const total = await pickCherry(user)
       setCherries(total)
       setPicked(true)
     } catch (e) {
@@ -55,47 +69,25 @@ export default function CherryTree() {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '16px',
-      padding: '20px',
-      fontFamily: '"Segoe UI", sans-serif',
-      color: '#fff',
-      maxWidth: '360px',
-      margin: '0 auto'
-    }}>
-      <div style={{ fontSize: '28px' }}>🍒 樱桃数: {cherries}</div>
+    <div style={{ textAlign: 'center', padding: 20 }}>
+      <div style={{ fontSize: 48 }}>🌳</div>
+      <div style={{ fontSize: 24, margin: 12 }}>🍒 樱桃数: {cherries}</div>
 
       <button
         onClick={handlePick}
-        disabled={!user || picked || loading}
+        disabled={loading || picked || !user}
         style={{
-          width: '100%',
-          padding: '16px',
-          borderRadius: '12px',
+          padding: '12px 24px',
+          fontSize: 18,
+          borderRadius: 12,
+          cursor: loading || picked ? 'not-allowed' : 'pointer',
+          backgroundColor: picked ? '#64748b' : '#dc2626',
+          color: 'white',
           border: 'none',
-          background: picked ? '#64748b' : '#dc2626',
-          color: '#fff',
-          fontSize: '20px',
-          fontWeight: 'bold',
-          cursor: (!user || picked) ? 'not-allowed' : 'pointer',
-          transition: 'all 0.2s ease',
         }}
       >
-        {loading
-          ? '加载中...'
-          : picked
-            ? '✅ 今日已摘取'
-            : '摘樱桃'}
+        {loading ? '加载中...' : picked ? '今日已摘' : '摘樱桃'}
       </button>
-
-      {!user && (
-        <div style={{ fontSize: '14px', color: '#94a3b8', textAlign: 'center' }}>
-          请在 Telegram 内打开
-        </div>
-      )}
     </div>
   )
 }

@@ -1,13 +1,17 @@
-// src/lib/useTelegramUser.js
-export async function getOrCreateUser() {
-  if (typeof window === 'undefined') return null
-  const tg = window.Telegram?.WebApp
-  if (!tg) return null
+// 获取 Telegram 用户信息
+export function useTelegramUser() {
+  const getUser = () => {
+    if (typeof window === 'undefined') return null
+    const tg = window.Telegram?.WebApp
+    if (!tg) return null
 
-  tg.ready()
+    tg.ready()
 
-  const userId = tg.initDataUnsafe?.user?.id
-  if (!userId) return null
+    const id = tg.initDataUnsafe?.user?.id
+    const username = tg.initDataUnsafe?.user?.username
+    if (!id) return null
+    return { id, username }
+  }
 
-  return { id: userId }
+  return getUser()
 }

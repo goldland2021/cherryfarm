@@ -1,34 +1,37 @@
-// src/lib/cherryService.js
 import { supabase } from './supabaseClient'
 
 /**
- * 查询用户今天是否摘过樱桃
+ * 判断用户今天是否已摘樱桃
+ * @param {{id:number, username:string}} user
+ * @returns {Promise<boolean>}
  */
-export async function hasPickedToday(userId) {
+export async function hasPickedToday(user) {
   const today = new Date().toISOString().slice(0, 10)
-  const { data, error } = await supabase
+  const { count, error } = await supabase
     .from('cherry_picks')
-    .select('id')
-    .eq('user_id', userId)
+    .select('id', { head: true, count: 'exact' })
+    .eq('user_id', user.id)
     .eq('picked_at', today)
-    .maybeSingle()
 
   if (error) {
     console.error('hasPickedToday error:', error)
     return false
   }
-  return !!data
+
+  return count > 0
 }
 
 /**
- * 摘樱桃并返回新的樱桃数量
+ * 用户摘樱桃
+ * @param {{id:number, username:string}} user
+ * @returns {Promise<number>} 用户总樱桃数
  */
-export async function pickCherry(userId) {
+export async function pickCherry(user) {
   const today = new Date().toISOString().slice(0, 10)
 
-  // 插入今天的摘樱桃记录
+  // 插入今日记录
   const { error } = await supabase.from('cherry_picks').insert([
-    { user_id: userId, picked_at: today }
+    { user_id: user.id, username: user.username ?? null, picked_at: today }
   ])
 
   if (error) {
@@ -36,16 +39,16 @@ export async function pickCherry(userId) {
     throw error
   }
 
-  // 查询用户总樱桃数
-  const { data, error: fetchError } = await supabase
+  // 查询总樱桃数
+  const { count, error: fetchError } = await supabase
     .from('cherry_picks')
-    .select('id', { count: 'exact' })
-    .eq('user_id', userId)
+    .select('id', { head: true, count: 'exact' })
+    .eq('user_id', user.id)
 
   if (fetchError) {
     console.error('fetch cherries count error:', fetchError)
     return 0
   }
 
-  return data?.length ?? 0
+  return count ?? 0
 }
