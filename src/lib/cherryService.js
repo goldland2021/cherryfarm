@@ -7,8 +7,6 @@ import { supabase } from './supabaseClient'
  */
 export async function hasPickedToday(user) {
   const today = new Date().toISOString().slice(0, 10)
-  console.log('查询今日是否已摘:', { userId: user.id, today })
-  
   const { count, error } = await supabase
     .from('cherry_picks')
     .select('id', { head: true, count: 'exact' })
@@ -20,7 +18,6 @@ export async function hasPickedToday(user) {
     return false
   }
 
-  console.log('hasPickedToday 结果:', { count, picked: count > 0 })
   return count > 0
 }
 
@@ -31,59 +28,27 @@ export async function hasPickedToday(user) {
  */
 export async function pickCherry(user) {
   const today = new Date().toISOString().slice(0, 10)
-  
-  console.log('开始摘樱桃:', { 
-    userId: user.id, 
-    username: user.username, 
-    today 
-  })
 
-  // 1. 先检查是否已摘过（双重检查）
-  const alreadyPicked = await hasPickedToday(user)
-  if (alreadyPicked) {
-    console.log('今日已摘过樱桃')
-    throw new Error('今日已摘过樱桃')
-  }
-
-  // 2. 插入今日记录（移除 username）
-  const { data, error } = await supabase
-    .from('cherry_picks')
-    .insert([
-      { 
-        user_id: user.id, 
-        // 移除 username，只插入必需字段
-        picked_at: today 
-      }
-    ])
-    .select()
-
-  console.log('插入结果:', { data, error })
+  // 插入今日记录
+  const { error } = await supabase.from('cherry_picks').insert([
+    { user_id: user.id, username: user.username ?? null, picked_at: today }
+  ])
 
   if (error) {
-    console.error('pickCherry插入失败:', error)
-    
-    // 如果是唯一约束错误（同一天只能摘一次）
-    if (error.code === '23505') {
-      console.log('重复摘取，可能是并发问题')
-      // 继续查询总数
-    } else {
-      throw new Error(`摘樱桃失败: ${error.message}`)
-    }
+    console.error('pickCherry error:', error)
+    throw error
   }
 
-  // 3. 查询总樱桃数
+  // 查询总樱桃数
   const { count, error: fetchError } = await supabase
     .from('cherry_picks')
     .select('id', { head: true, count: 'exact' })
     .eq('user_id', user.id)
-
-  console.log('查询总数结果:', { count, fetchError })
 
   if (fetchError) {
     console.error('fetch cherries count error:', fetchError)
     return 0
   }
 
-  console.log('摘樱桃成功，总数为:', count)
   return count ?? 0
 }
