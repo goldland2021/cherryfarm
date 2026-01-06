@@ -45,13 +45,13 @@ export async function pickCherry(user) {
     throw new Error('今日已摘过樱桃')
   }
 
-  // 2. 插入今日记录
+  // 2. 插入今日记录（移除 username）
   const { data, error } = await supabase
     .from('cherry_picks')
     .insert([
       { 
         user_id: user.id, 
-        username: user.username ?? null, 
+        // 移除 username，只插入必需字段
         picked_at: today 
       }
     ])
