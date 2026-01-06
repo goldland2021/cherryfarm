@@ -8,9 +8,8 @@ export default function CherryTree() {
   const [picked, setPicked] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 初始化 Telegram 用户
   useEffect(() => {
-    async function initUser() {
+    async function init() {
       const u = await getOrCreateUser()
       if (!u) {
         setLoading(false)
@@ -18,35 +17,40 @@ export default function CherryTree() {
       }
       setUser(u)
 
-      // 查询今天是否摘过
       const pickedToday = await hasPickedToday(u.id)
       setPicked(pickedToday)
 
-      // 查询当前樱桃数
-      const { data, error } = await fetchCurrentCherries(u.id)
-      if (!error) setCherries(data?.cherries ?? 0)
+      // 如果已经摘过就统计总数
+      if (pickedToday) {
+        const { length } = await fetchCherries(u.id)
+        setCherries(length)
+      }
 
       setLoading(false)
     }
-    initUser()
-  }, [])
 
-  async function fetchCurrentCherries(userId) {
-    try {
-      const { data, error } = await getOrCreateUserCherries(userId)
-      return { data, error }
-    } catch (e) {
-      console.error(e)
-      return { data: null, error: e }
+    async function fetchCherries(userId) {
+      const { data, error } = await window.supabase
+        .from('cherry_picks')
+        .select('id')
+        .eq('user_id', userId)
+      if (error) return { length: 0 }
+      return { length: data?.length ?? 0 }
     }
-  }
+
+    init()
+  }, [])
 
   async function handlePick() {
     if (!user || picked || loading) return
     setLoading(true)
-    const { new_cherries, picked: isPicked } = await pickCherry(user.id)
-    setCherries(new_cherries)
-    setPicked(isPicked)
+    try {
+      const total = await pickCherry(user.id)
+      setCherries(total)
+      setPicked(true)
+    } catch (e) {
+      console.error(e)
+    }
     setLoading(false)
   }
 
@@ -62,7 +66,7 @@ export default function CherryTree() {
       maxWidth: '360px',
       margin: '0 auto'
     }}>
-      <div style={{ fontSize: '32px' }}>🍒 樱桃数: {cherries}</div>
+      <div style={{ fontSize: '28px' }}>🍒 樱桃数: {cherries}</div>
 
       <button
         onClick={handlePick}
