@@ -4,11 +4,10 @@ import { hasPickedToday, pickCherry } from '../lib/cherryService'
 
 export default function CherryTree() {
   const [userId, setUserId] = useState(null)
-  const [picked, setPicked] = useState(false) // 是否已经摘过
-  const [adPicked, setAdPicked] = useState(false) // 是否通过广告摘过
+  const [picked, setPicked] = useState(false)
+  const [adPicked, setAdPicked] = useState(false)
   const [loading, setLoading] = useState(true)
   const [cherryCount, setCherryCount] = useState(428)
-  const [energy, setEnergy] = useState(85)
 
   // 广告状态
   const [adWatched, setAdWatched] = useState(false)
@@ -16,9 +15,7 @@ export default function CherryTree() {
 
   // 游戏状态
   const [coins, setCoins] = useState(2480)
-  const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(7)
-  const [xp, setXp] = useState(65)
 
   // 获取 Telegram User
   useEffect(() => {
@@ -60,7 +57,6 @@ export default function CherryTree() {
       setWatchingAd(false)
       setAdWatched(true)
       setCoins(prev => prev + 50)
-      setEnergy(prev => Math.min(100, prev + 15))
     }, 5000)
   }
 
@@ -74,8 +70,6 @@ export default function CherryTree() {
     setLoading(false)
     setCoins(prev => prev + 25)
     setCherryCount(prev => prev + 1)
-    setEnergy(prev => Math.max(0, prev - 10))
-    setXp(prev => Math.min(100, prev + 8))
   }
 
   // 第二次摘樱桃（看广告后）
@@ -83,21 +77,17 @@ export default function CherryTree() {
     if (!userId || !adWatched || adPicked || loading) return
 
     setLoading(true)
-    // 模拟广告摘樱桃的API调用
     setTimeout(async () => {
-      // 这里可以调用新的API，比如 pickCherryByAd(userId)
       setAdPicked(true)
       setLoading(false)
       setCoins(prev => prev + 25)
       setCherryCount(prev => prev + 1)
-      setEnergy(prev => Math.max(0, prev - 10))
-      setXp(prev => Math.min(100, prev + 8))
     }, 1000)
   }
 
-  // 导航按钮处理
+  // 导航按钮处理 - 简化
   const handleNavClick = (section) => {
-    alert(`即将跳转到 ${section} 页面（功能开发中）`)
+    console.log(`Navigate to ${section}`)
   }
 
   return (
@@ -114,27 +104,26 @@ export default function CherryTree() {
         color: '#f8fafc',
       }}
     >
-      {/* 顶部状态栏 */}
+      {/* 顶部状态栏 - 简化 */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '16px',
-        padding: '12px',
+        marginBottom: '20px',
+        padding: '12px 16px',
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
         backdropFilter: 'blur(10px)',
         borderRadius: '16px',
         border: '1px solid rgba(148, 163, 184, 0.1)',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
       }}>
-        {/* 左侧：用户等级 */}
+        {/* 等级 */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
           padding: '8px 12px',
           borderRadius: '12px',
-          minWidth: '80px',
         }}>
           <div style={{
             width: '28px',
@@ -149,40 +138,23 @@ export default function CherryTree() {
             fontWeight: 'bold',
             fontSize: '14px',
           }}>{level}</div>
-          <div>
-            <div style={{ fontSize: '12px', opacity: 0.8 }}>Level</div>
-            <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{xp}%</div>
-          </div>
+          <div style={{ fontSize: '14px', fontWeight: 'bold' }}>Level</div>
         </div>
 
-        {/* 中央：樱桃数量 */}
+        {/* 樱桃数量 - 中央位置 */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          flex: 1,
-          margin: '0 12px',
         }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
             padding: '6px 16px',
             borderRadius: '12px',
             backgroundColor: 'rgba(220, 38, 38, 0.15)',
             border: '1px solid rgba(220, 38, 38, 0.3)',
-            position: 'relative',
-            overflow: 'hidden',
           }}>
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'linear-gradient(90deg, transparent, rgba(251, 113, 133, 0.1), transparent)',
-              animation: 'shine 2s infinite',
-            }}></div>
             <span style={{
               fontSize: '28px',
               marginRight: '8px',
@@ -192,92 +164,20 @@ export default function CherryTree() {
               fontWeight: '800',
               fontSize: '24px',
               color: '#fecaca',
-              textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-            }}>{cherryCount.toLocaleString()}</span>
-          </div>
-          <div style={{
-            fontSize: '11px',
-            color: '#94a3b8',
-            marginTop: '4px',
-            fontWeight: '500',
-            letterSpacing: '0.5px',
-          }}>
-            CHERRIES
+            }}>{cherryCount}</span>
           </div>
         </div>
 
-        {/* 右侧：资源 */}
+        {/* 金币 */}
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          minWidth: '80px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <div style={{
-              width: '20px',
-              height: '20px',
-              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '6px',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)',
-            }}>💰</div>
-            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{coins.toLocaleString()}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-            <div style={{
-              width: '20px',
-              height: '20px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '6px',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
-            }}>⚡</div>
-            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{energy}%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 能量进度条 */}
-      <div style={{
-        marginBottom: '16px',
-        padding: '8px 12px',
-        backgroundColor: 'rgba(30, 41, 59, 0.6)',
-        borderRadius: '12px',
-        border: '1px solid rgba(148, 163, 184, 0.1)',
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '6px',
+          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+          padding: '8px 12px',
+          borderRadius: '12px',
         }}>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Harvest Energy</span>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#60a5fa' }}>{energy}/100</span>
-        </div>
-        <div style={{
-          height: '8px',
-          backgroundColor: 'rgba(30, 41, 59, 0.8)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            width: `${energy}%`,
-            height: '100%',
-            background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
-            borderRadius: '4px',
-            transition: 'width 0.3s ease',
-          }}></div>
+          <span style={{ fontSize: '18px', marginRight: '6px' }}>💰</span>
+          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{coins}</span>
         </div>
       </div>
 
@@ -308,6 +208,7 @@ export default function CherryTree() {
         <div style={{
           fontSize: '160px',
           marginBottom: '24px',
+          textAlign: 'center',
           filter: picked && !adWatched ? 'grayscale(0.5) opacity(0.7)' : 'drop-shadow(0 8px 24px rgba(251, 113, 133, 0.3))',
           transition: 'all 0.3s ease',
           position: 'relative',
@@ -317,43 +218,36 @@ export default function CherryTree() {
 
         {/* 状态信息 */}
         <div style={{
-          marginBottom: '20px',
+          marginBottom: '24px',
           padding: '14px',
           borderRadius: '14px',
           backgroundColor: 'rgba(30, 41, 59, 0.9)',
           border: '1px solid rgba(148, 163, 184, 0.2)',
           position: 'relative',
           zIndex: 1,
+          textAlign: 'center',
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f8fafc' }}>
-              {picked 
-                ? adWatched 
-                  ? adPicked
-                    ? '🎉 今日樱桃已摘完！明天再来吧'
-                    : '✅ 广告已完成！点击下方按钮再摘一次'
-                  : '🍒 今日已摘取！观看广告可再摘一次'
-                : '🍒 每日免费摘取'}
-            </div>
-            <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-              {picked 
-                ? adWatched
-                  ? adPicked
-                    ? '下次摘取将在24小时后刷新'
-                    : '额外奖励：再摘一次樱桃！'
-                  : '观看广告获得额外摘取机会'
-                : '点击下方按钮收获今日樱桃'}
-            </div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f8fafc', marginBottom: '4px' }}>
+            {picked 
+              ? adWatched 
+                ? adPicked
+                  ? '🎉 今日樱桃已摘完！'
+                  : '✅ 广告已完成！'
+                : '🍒 今日已摘取！'
+              : '🍒 每日免费摘取'}
+          </div>
+          <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+            {picked 
+              ? adWatched
+                ? adPicked
+                  ? '下次摘取将在24小时后刷新'
+                  : '点击下方按钮再摘一次'
+                : '观看广告可再摘一次'
+              : '点击下方按钮收获今日樱桃'}
           </div>
         </div>
 
-        {/* 第一部分：免费摘取按钮（总是显示） */}
+        {/* 第一部分：免费摘取按钮 */}
         <div style={{ marginBottom: adWatched && !adPicked ? '20px' : '0' }}>
           <button
             disabled={!userId || picked || loading}
@@ -377,16 +271,15 @@ export default function CherryTree() {
               transition: 'all 0.3s ease',
               position: 'relative',
               zIndex: 1,
-              letterSpacing: '0.5px',
             }}
             onMouseOver={e => {
               if (userId && !picked) {
-                e.target.style.transform = 'translateY(-3px) scale(1.03)'
+                e.target.style.transform = 'translateY(-3px)'
                 e.target.style.boxShadow = '0 12px 40px rgba(220, 38, 38, 0.7)'
               }
             }}
             onMouseOut={e => {
-              e.target.style.transform = 'translateY(0) scale(1)'
+              e.target.style.transform = 'translateY(0)'
               e.target.style.boxShadow = picked 
                 ? 'none' 
                 : '0 8px 32px rgba(220, 38, 38, 0.5)'
@@ -395,32 +288,19 @@ export default function CherryTree() {
             {loading && !picked ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                 <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                Harvesting...
+                摘取中...
               </div>
             ) : !userId ? (
-              '🔒 OPEN IN TELEGRAM'
+              '请在 Telegram 内打开'
             ) : picked ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>✅</span>
-                <span>DAILY HARVEST COMPLETE</span>
-              </div>
+              '✅ 今日已摘取'
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <span>🍒</span>
-                <span>HARVEST CHERRIES</span>
-                <span style={{ 
-                  backgroundColor: 'rgba(255,255,255,0.2)', 
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  marginLeft: '8px'
-                }}>+25 COINS</span>
-              </div>
+              '🍒 免费摘取樱桃'
             )}
           </button>
         </div>
 
-        {/* 第二部分：广告摘取区域（只在第一次摘取后显示） */}
+        {/* 第二部分：广告摘取区域 */}
         {picked && !adPicked && (
           <div style={{
             marginTop: '20px',
@@ -438,21 +318,10 @@ export default function CherryTree() {
               border: `1px solid ${adWatched ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
               textAlign: 'center',
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}>
-                <span style={{ fontSize: '18px' }}>{adWatched ? '✅' : '🎬'}</span>
-                <span style={{ 
-                  fontWeight: '600',
-                  color: adWatched ? '#86efac' : '#fde68a'
-                }}>
-                  {adWatched 
-                    ? 'Ad completed! Get extra harvest' 
-                    : 'Watch an ad for extra harvest'}
-                </span>
+              <div style={{ fontWeight: '600', color: adWatched ? '#86efac' : '#fde68a' }}>
+                {adWatched 
+                  ? '✅ 广告已完成，可额外摘取一次' 
+                  : '观看广告可额外摘取一次'}
               </div>
             </div>
 
@@ -476,19 +345,16 @@ export default function CherryTree() {
                   cursor: watchingAd ? 'not-allowed' : 'pointer',
                   boxShadow: '0 6px 20px rgba(245, 158, 11, 0.4)',
                   transition: 'all 0.2s ease',
-                  position: 'relative',
-                  zIndex: 1,
-                  letterSpacing: '0.5px',
                 }}
-                onMouseOver={e => !watchingAd && (e.target.style.transform = 'translateY(-2px) scale(1.02)')}
-                onMouseOut={e => e.target.style.transform = 'translateY(0) scale(1)'}
+                onMouseOver={e => !watchingAd && (e.target.style.transform = 'translateY(-2px)')}
+                onMouseOut={e => e.target.style.transform = 'translateY(0)'}
               >
                 {watchingAd ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                     <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    Watching ad... +50 coins
+                    广告播放中...
                   </div>
-                ) : '🎬 WATCH AD & GET +50 COINS'}
+                ) : '🎬 观看广告 (+50金币)'}
               </button>
             )}
 
@@ -509,39 +375,24 @@ export default function CherryTree() {
                   cursor: 'pointer',
                   boxShadow: '0 8px 32px rgba(16, 185, 129, 0.5)',
                   transition: 'all 0.3s ease',
-                  position: 'relative',
-                  zIndex: 1,
-                  letterSpacing: '0.5px',
                 }}
                 onMouseOver={e => {
                   if (userId && !adPicked) {
-                    e.target.style.transform = 'translateY(-3px) scale(1.03)'
+                    e.target.style.transform = 'translateY(-3px)'
                     e.target.style.boxShadow = '0 12px 40px rgba(16, 185, 129, 0.7)'
                   }
                 }}
                 onMouseOut={e => {
-                  e.target.style.transform = 'translateY(0) scale(1)'
+                  e.target.style.transform = 'translateY(0)'
                   e.target.style.boxShadow = '0 8px 32px rgba(16, 185, 129, 0.5)'
                 }}
               >
                 {loading ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                     <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    Harvesting Extra...
+                    摘取中...
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <span>🍒</span>
-                    <span>EXTRA HARVEST</span>
-                    <span style={{ 
-                      backgroundColor: 'rgba(255,255,255,0.2)', 
-                      padding: '2px 8px',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      marginLeft: '8px'
-                    }}>+25 COINS</span>
-                  </div>
-                )}
+                ) : '🍒 额外摘取一次'}
               </button>
             )}
           </div>
@@ -558,23 +409,13 @@ export default function CherryTree() {
           border: '1px solid rgba(148, 163, 184, 0.1)',
           textAlign: 'center',
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            gap: '8px',
-            marginBottom: '8px'
-          }}>
-            <span style={{ fontSize: '18px' }}>🎁</span>
-            <span style={{ fontWeight: '600', color: '#fbbf24' }}>Daily Bonus Available!</span>
-          </div>
           <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-            Complete the ad to earn extra coins and another cherry harvest
+            完成广告可额外获得 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>+50金币</span> 和 <span style={{ color: '#fecaca', fontWeight: 'bold' }}>+1樱桃</span>
           </div>
         </div>
       )}
 
-      {/* 底部导航栏 */}
+      {/* 底部导航栏 - 简化 */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -588,15 +429,13 @@ export default function CherryTree() {
         padding: '12px 16px',
         display: 'flex',
         justifyContent: 'space-around',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)',
         zIndex: 100,
       }}>
         {[
-          { icon: '🏆', label: 'Rank', color: '#fbbf24' },
-          { icon: '🌳', label: 'Farm', color: '#10b981' },
-          { icon: '🛒', label: 'Shop', color: '#8b5cf6' },
-          { icon: '📊', label: 'Stats', color: '#3b82f6' },
-          { icon: '👤', label: 'Profile', color: '#ec4899' },
+          { icon: '🏠', label: '主页' },
+          { icon: '🌳', label: '农场' },
+          { icon: '🏆', label: '排行' },
+          { icon: '👤', label: '我的' },
         ].map((item, index) => (
           <button
             key={index}
@@ -607,45 +446,28 @@ export default function CherryTree() {
               alignItems: 'center',
               background: 'none',
               border: 'none',
-              color: index === 1 ? item.color : '#94a3b8',
-              fontSize: '11px',
-              fontWeight: index === 1 ? '800' : '500',
+              color: index === 1 ? '#10b981' : '#94a3b8',
+              fontSize: '12px',
+              fontWeight: index === 1 ? 'bold' : 'normal',
               cursor: 'pointer',
-              padding: '8px 4px',
-              borderRadius: '12px',
+              padding: '8px 12px',
+              borderRadius: '8px',
               transition: 'all 0.2s ease',
-              minWidth: '55px',
-              position: 'relative',
             }}
             onMouseOver={e => {
               e.target.style.backgroundColor = 'rgba(148, 163, 184, 0.1)'
-              e.target.style.transform = 'translateY(-2px)'
             }}
             onMouseOut={e => {
               e.target.style.backgroundColor = 'transparent'
-              e.target.style.transform = 'translateY(0)'
             }}
           >
             <div style={{
-              fontSize: '22px',
+              fontSize: '24px',
               marginBottom: '4px',
-              filter: index === 1 ? 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4))' : 'none',
             }}>
               {item.icon}
             </div>
             <span>{item.label}</span>
-            {index === 1 && (
-              <div style={{
-                position: 'absolute',
-                top: '4px',
-                right: '4px',
-                width: '6px',
-                height: '6px',
-                backgroundColor: '#10b981',
-                borderRadius: '50%',
-                animation: 'pulse 2s infinite',
-              }}></div>
-            )}
           </button>
         ))}
       </div>
@@ -656,17 +478,9 @@ export default function CherryTree() {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
         }
-        @keyframes shine {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
         }
       `}</style>
     </div>
