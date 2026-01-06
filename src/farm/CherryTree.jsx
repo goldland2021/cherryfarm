@@ -2,55 +2,124 @@ import { useEffect, useState } from 'react'
 import { getTelegramUserId } from '../lib/telegram'
 import { hasPickedToday, pickCherry } from '../lib/cherryService'
 
+// Loading Spinner 组件
+function LoadingSpinner({ size = 20 }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        border: '3px solid rgba(255,255,255,0.3)',
+        borderTopColor: 'white',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+      }}
+    ></div>
+  )
+}
+
+// 通用按钮组件
+function GradientButton({ children, gradient, disabled, loading, onClick, style = {} }) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        width: '100%',
+        padding: '18px 0',
+        borderRadius: '16px',
+        border: 'none',
+        background: disabled ? 'linear-gradient(135deg, #475569, #64748b)' : gradient,
+        color: '#ffffff',
+        fontSize: '18px',
+        fontWeight: '800',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: disabled ? 'none' : '0 8px 32px rgba(0,0,0,0.3)',
+        transition: 'all 0.2s ease',
+        ...style,
+      }}
+    >
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+          <LoadingSpinner size={20} />
+          {children || '加载中...'}
+        </div>
+      ) : (
+        children
+      )}
+    </button>
+  )
+}
+
 export default function CherryTree() {
+  // 用户状态
   const [userId, setUserId] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  // 游戏状态
+  const [coins, setCoins] = useState(2480)
+  const [level, setLevel] = useState(7)
+  const [cherryCount, setCherryCount] = useState(428)
+
+  // 摘樱桃状态
   const [picked, setPicked] = useState(false)
   const [adPicked, setAdPicked] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [cherryCount, setCherryCount] = useState(428)
 
   // 广告状态
   const [adWatched, setAdWatched] = useState(false)
   const [watchingAd, setWatchingAd] = useState(false)
 
-  // 游戏状态
-  const [coins, setCoins] = useState(2480)
-  const [level, setLevel] = useState(7)
-
-  // 获取 Telegram User
+  // ---------------------------
+  // 初始化用户信息 & 查询今日摘取状态
+  // ---------------------------
   useEffect(() => {
-    const id = getTelegramUserId()
-    setUserId(id)
+    const uid = getTelegramUserId()
+    setUserId(uid)
+
+    if (uid) {
+      checkPickedStatus(uid)
+    } else {
+      setLoading(false)
+    }
   }, [])
 
-  // 查询今天是否已摘
-  useEffect(() => {
-    if (!userId) {
+  async function checkPickedStatus(uid) {
+    try {
+      const todayPicked = await hasPickedToday(uid)
+      setPicked(todayPicked)
+      // TODO: 查询广告摘取状态，如果后端有记录可同步
+      // setAdPicked(todayAdPicked)
+    } catch (e) {
+      console.error(e)
+    } finally {
       setLoading(false)
-      return
     }
+  }
 
-    let alive = true
+  // ---------------------------
+  // 免费摘樱桃
+  // ---------------------------
+  async function handleFirstPick() {
+    if (!userId || picked || loading) return
 
-    async function check() {
-      try {
-        const result = await hasPickedToday(userId)
-        if (alive) setPicked(result)
-      } catch (e) {
-        console.error(e)
-      } finally {
-        if (alive) setLoading(false)
-      }
+    setLoading(true)
+    try {
+      await pickCherry(userId)
+      setPicked(true)
+      setCoins(prev => prev + 25)
+      setCherryCount(prev => prev + 1)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    check()
-    return () => (alive = false)
-  }, [userId])
-
-  // 模拟看广告
-  async function watchAd() {
+  // ---------------------------
+  // 看广告
+  // ---------------------------
+  function watchAd() {
     if (watchingAd || adWatched) return
-
     setWatchingAd(true)
 
     setTimeout(() => {
@@ -60,35 +129,29 @@ export default function CherryTree() {
     }, 5000)
   }
 
-  // 第一次摘樱桃（免费）
-  async function handleFirstPick() {
-    if (!userId || picked || loading) return
-
+  // ---------------------------
+  // 广告摘樱桃
+  // ---------------------------
+  async function handleAdPick() {
+    if (!userId || !adWatched || adPicked) return
     setLoading(true)
-    await pickCherry(userId)
-    setPicked(true)
-    setLoading(false)
+    await new Promise(res => setTimeout(res, 1000))
+    setAdPicked(true)
     setCoins(prev => prev + 25)
     setCherryCount(prev => prev + 1)
+    setLoading(false)
   }
 
-  // 第二次摘樱桃（看广告后）
-  async function handleAdPick() {
-    if (!userId || !adWatched || adPicked || loading) return
+  // ---------------------------
+  // 底部导航
+  // ---------------------------
+  const handleNavClick = (section) => console.log(`Navigate to ${section}`)
 
-    setLoading(true)
-    setTimeout(async () => {
-      setAdPicked(true)
-      setLoading(false)
-      setCoins(prev => prev + 25)
-      setCherryCount(prev => prev + 1)
-    }, 1000)
-  }
-
-  // 导航按钮处理 - 简化
-  const handleNavClick = (section) => {
-    console.log(`Navigate to ${section}`)
-  }
+  // ---------------------------
+  // 按钮状态
+  // ---------------------------
+  const firstPickDisabled = !userId || picked || loading
+  const adPickDisabled = !userId || !adWatched || adPicked || loading
 
   return (
     <div
@@ -99,301 +162,172 @@ export default function CherryTree() {
         minHeight: '100vh',
         backgroundColor: '#0f172a',
         background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
-        position: 'relative',
-        fontFamily: '"Segoe UI", -apple-system, system-ui, sans-serif',
         color: '#f8fafc',
+        fontFamily: '"Segoe UI", -apple-system, system-ui, sans-serif',
       }}
     >
-      {/* 顶部状态栏 - 简化 */}
+      {/* 顶部状态栏 */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '20px',
+        marginBottom: 20,
         padding: '12px 16px',
-        backgroundColor: 'rgba(30, 41, 59, 0.8)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '16px',
-        border: '1px solid rgba(148, 163, 184, 0.1)',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+        backgroundColor: 'rgba(30,41,59,0.8)',
+        borderRadius: 16,
       }}>
         {/* 等级 */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+          background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
           padding: '8px 12px',
-          borderRadius: '12px',
+          borderRadius: 12,
         }}>
           <div style={{
-            width: '28px',
-            height: '28px',
-            backgroundColor: '#ffffff',
+            width: 28,
+            height: 28,
             borderRadius: '50%',
+            backgroundColor: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: '8px',
-            color: '#7c3aed',
+            marginRight: 8,
             fontWeight: 'bold',
-            fontSize: '14px',
+            color: '#7c3aed',
           }}>{level}</div>
-          <div style={{ fontSize: '14px', fontWeight: 'bold' }}>Level</div>
+          <div style={{ fontSize: 14, fontWeight: 'bold' }}>Level</div>
         </div>
 
-        {/* 樱桃数量 - 中央位置 */}
+        {/* 樱桃数量 */}
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
+          padding: '6px 16px',
+          borderRadius: 12,
+          backgroundColor: 'rgba(220,38,38,0.15)',
+          border: '1px solid rgba(220,38,38,0.3)',
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '6px 16px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(220, 38, 38, 0.15)',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-          }}>
-            <span style={{
-              fontSize: '28px',
-              marginRight: '8px',
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-            }}>🍒</span>
-            <span style={{
-              fontWeight: '800',
-              fontSize: '24px',
-              color: '#fecaca',
-            }}>{cherryCount}</span>
-          </div>
+          <span style={{ fontSize: 28, marginRight: 8 }}>🍒</span>
+          <span style={{ fontWeight: 800, fontSize: 24, color: '#fecaca' }}>{cherryCount}</span>
         </div>
 
         {/* 金币 */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+          background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
           padding: '8px 12px',
-          borderRadius: '12px',
+          borderRadius: 12,
         }}>
-          <span style={{ fontSize: '18px', marginRight: '6px' }}>💰</span>
-          <span style={{ fontWeight: 'bold', fontSize: '16px' }}>{coins}</span>
+          <span style={{ fontSize: 18, marginRight: 6 }}>💰</span>
+          <span style={{ fontWeight: 'bold', fontSize: 16 }}>{coins}</span>
         </div>
       </div>
 
-      {/* 🌳 樱桃树主区域 */}
+      {/* 🌳 樱桃树区域 */}
       <div style={{
-        backgroundColor: 'rgba(30, 41, 59, 0.8)',
-        borderRadius: '20px',
-        padding: '24px',
-        marginBottom: '16px',
-        border: '1px solid rgba(148, 163, 184, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        backgroundColor: 'rgba(30,41,59,0.8)',
+        borderRadius: 20,
+        padding: 24,
+        marginBottom: 16,
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* 背景装饰 */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translate(-50%,-50%)',
           width: '200%',
           height: '200%',
-          background: 'radial-gradient(circle at center, rgba(251, 113, 133, 0.1) 0%, transparent 70%)',
+          background: 'radial-gradient(circle at center, rgba(251,113,133,0.1) 0%, transparent 70%)',
           zIndex: 0,
         }}></div>
 
-        {/* 樱桃树 */}
         <div style={{
-          fontSize: '160px',
-          marginBottom: '24px',
+          fontSize: 160,
           textAlign: 'center',
-          filter: picked && !adWatched ? 'grayscale(0.5) opacity(0.7)' : 'drop-shadow(0 8px 24px rgba(251, 113, 133, 0.3))',
-          transition: 'all 0.3s ease',
-          position: 'relative',
-          zIndex: 1,
+          marginBottom: 24,
+          filter: picked && !adWatched ? 'grayscale(0.5) opacity(0.7)' : 'drop-shadow(0 8px 24px rgba(251,113,133,0.3))',
           animation: (picked && !adWatched) ? 'none' : 'float 3s ease-in-out infinite',
+          zIndex: 1,
+          position: 'relative',
         }}>🌳</div>
 
-        {/* 状态信息 */}
+        {/* 状态提示 */}
         <div style={{
-          marginBottom: '24px',
-          padding: '14px',
-          borderRadius: '14px',
-          backgroundColor: 'rgba(30, 41, 59, 0.9)',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          position: 'relative',
-          zIndex: 1,
           textAlign: 'center',
+          padding: 14,
+          borderRadius: 14,
+          backgroundColor: 'rgba(30,41,59,0.9)',
+          border: '1px solid rgba(148,163,184,0.2)',
+          marginBottom: 24,
+          zIndex: 1,
         }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f8fafc', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 'bold', fontSize: 18 }}>
             {picked 
               ? adWatched 
-                ? adPicked
-                  ? '🎉 今日樱桃已摘完！'
-                  : '✅ 广告已完成！'
+                ? adPicked ? '🎉 今日樱桃已摘完！' : '✅ 广告已完成！'
                 : '🍒 今日已摘取！'
               : '🍒 每日免费摘取'}
           </div>
-          <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+          <div style={{ fontSize: 14, color: '#94a3b8' }}>
             {picked 
               ? adWatched
-                ? adPicked
-                  ? '下次摘取将在24小时后刷新'
-                  : '点击下方按钮再摘一次'
+                ? adPicked ? '下次摘取将在24小时后刷新' : '点击下方按钮再摘一次'
                 : '观看广告可再摘一次'
               : '点击下方按钮收获今日樱桃'}
           </div>
         </div>
 
-        {/* 第一部分：免费摘取按钮 */}
-        <div style={{ marginBottom: adWatched && !adPicked ? '20px' : '0' }}>
-          <button
-            disabled={!userId || picked || loading}
-            onClick={handleFirstPick}
-            style={{
-              width: '100%',
-              padding: '20px 0',
-              borderRadius: '18px',
-              border: 'none',
-              background: picked 
-                ? 'linear-gradient(135deg, #475569, #64748b)' 
-                : 'linear-gradient(135deg, #dc2626, #b91c1c)',
-              color: '#ffffff',
-              fontSize: '20px',
-              fontWeight: '800',
-              opacity: !userId ? 0.5 : 1,
-              cursor: (!userId || picked) ? 'not-allowed' : 'pointer',
-              boxShadow: picked 
-                ? 'none' 
-                : '0 8px 32px rgba(220, 38, 38, 0.5)',
-              transition: 'all 0.3s ease',
-              position: 'relative',
-              zIndex: 1,
-            }}
-            onMouseOver={e => {
-              if (userId && !picked) {
-                e.target.style.transform = 'translateY(-3px)'
-                e.target.style.boxShadow = '0 12px 40px rgba(220, 38, 38, 0.7)'
-              }
-            }}
-            onMouseOut={e => {
-              e.target.style.transform = 'translateY(0)'
-              e.target.style.boxShadow = picked 
-                ? 'none' 
-                : '0 8px 32px rgba(220, 38, 38, 0.5)'
-            }}
-          >
-            {loading && !picked ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                摘取中...
-              </div>
-            ) : !userId ? (
-              '请在 Telegram 内打开'
-            ) : picked ? (
-              '✅ 今日已摘取'
-            ) : (
-              '🍒 免费摘取樱桃'
-            )}
-          </button>
-        </div>
+        {/* 免费摘取按钮 */}
+        <GradientButton
+          gradient="linear-gradient(135deg, #dc2626, #b91c1c)"
+          disabled={firstPickDisabled}
+          loading={loading && !picked}
+          onClick={handleFirstPick}
+        >
+          {picked ? '✅ 今日已摘取' : '🍒 免费摘取樱桃'}
+        </GradientButton>
 
-        {/* 第二部分：广告摘取区域 */}
+        {/* 广告摘取区域 */}
         {picked && !adPicked && (
-          <div style={{
-            marginTop: '20px',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(148, 163, 184, 0.2)',
-          }}>
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid rgba(148,163,184,0.2)' }}>
             {/* 广告状态提示 */}
             <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              borderRadius: '12px',
-              backgroundColor: adWatched 
-                ? 'rgba(34, 197, 94, 0.15)' 
-                : 'rgba(245, 158, 11, 0.15)',
-              border: `1px solid ${adWatched ? 'rgba(34, 197, 94, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+              marginBottom: 16,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: adWatched ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+              border: `1px solid ${adWatched ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
               textAlign: 'center',
             }}>
-              <div style={{ fontWeight: '600', color: adWatched ? '#86efac' : '#fde68a' }}>
-                {adWatched 
-                  ? '✅ 广告已完成，可额外摘取一次' 
-                  : '观看广告可额外摘取一次'}
+              <div style={{ fontWeight: 600, color: adWatched ? '#86efac' : '#fde68a' }}>
+                {adWatched ? '✅ 广告已完成，可额外摘取一次' : '观看广告可额外摘取一次'}
               </div>
             </div>
 
-            {/* 看广告按钮 */}
             {!adWatched && (
-              <button
-                onClick={watchAd}
+              <GradientButton
+                gradient="linear-gradient(135deg, #f59e0b, #d97706)"
                 disabled={!userId || watchingAd}
-                style={{
-                  width: '100%',
-                  padding: '18px 0',
-                  borderRadius: '16px',
-                  border: 'none',
-                  background: watchingAd
-                    ? 'linear-gradient(135deg, #475569, #64748b)'
-                    : 'linear-gradient(135deg, #f59e0b, #d97706)',
-                  color: '#ffffff',
-                  fontSize: '18px',
-                  fontWeight: '800',
-                  marginBottom: '12px',
-                  cursor: watchingAd ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 6px 20px rgba(245, 158, 11, 0.4)',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseOver={e => !watchingAd && (e.target.style.transform = 'translateY(-2px)')}
-                onMouseOut={e => e.target.style.transform = 'translateY(0)'}
+                loading={watchingAd}
+                onClick={watchAd}
               >
-                {watchingAd ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    广告播放中...
-                  </div>
-                ) : '🎬 观看广告 (+50金币)'}
-              </button>
+                🎬 观看广告 (+50金币)
+              </GradientButton>
             )}
 
-            {/* 广告摘取按钮 */}
             {adWatched && (
-              <button
-                disabled={!userId || adPicked || loading}
+              <GradientButton
+                gradient="linear-gradient(135deg, #10b981, #059669)"
+                disabled={adPickDisabled}
+                loading={loading && adWatched}
                 onClick={handleAdPick}
-                style={{
-                  width: '100%',
-                  padding: '20px 0',
-                  borderRadius: '18px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  color: '#ffffff',
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 32px rgba(16, 185, 129, 0.5)',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseOver={e => {
-                  if (userId && !adPicked) {
-                    e.target.style.transform = 'translateY(-3px)'
-                    e.target.style.boxShadow = '0 12px 40px rgba(16, 185, 129, 0.7)'
-                  }
-                }}
-                onMouseOut={e => {
-                  e.target.style.transform = 'translateY(0)'
-                  e.target.style.boxShadow = '0 8px 32px rgba(16, 185, 129, 0.5)'
-                }}
               >
-                {loading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <div style={{ width: '20px', height: '20px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                    摘取中...
-                  </div>
-                ) : '🍒 额外摘取一次'}
-              </button>
+                🍒 额外摘取一次
+              </GradientButton>
             )}
           </div>
         )}
@@ -402,30 +336,30 @@ export default function CherryTree() {
       {/* 奖励提示 */}
       {picked && !adPicked && (
         <div style={{
-          marginBottom: '20px',
-          padding: '14px',
-          backgroundColor: 'rgba(30, 41, 59, 0.8)',
-          borderRadius: '14px',
-          border: '1px solid rgba(148, 163, 184, 0.1)',
+          marginBottom: 20,
+          padding: 14,
+          backgroundColor: 'rgba(30,41,59,0.8)',
+          borderRadius: 14,
+          border: '1px solid rgba(148,163,184,0.1)',
           textAlign: 'center',
         }}>
-          <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+          <div style={{ fontSize: 14, color: '#94a3b8' }}>
             完成广告可额外获得 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>+50金币</span> 和 <span style={{ color: '#fecaca', fontWeight: 'bold' }}>+1樱桃</span>
           </div>
         </div>
       )}
 
-      {/* 底部导航栏 - 简化 */}
+      {/* 底部导航 */}
       <div style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
-        maxWidth: '360px',
+        maxWidth: 360,
         margin: '0 auto',
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        backgroundColor: 'rgba(15,23,42,0.95)',
         backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(148, 163, 184, 0.1)',
+        borderTop: '1px solid rgba(148,163,184,0.1)',
         padding: '12px 16px',
         display: 'flex',
         justifyContent: 'space-around',
@@ -447,32 +381,20 @@ export default function CherryTree() {
               background: 'none',
               border: 'none',
               color: index === 1 ? '#10b981' : '#94a3b8',
-              fontSize: '12px',
+              fontSize: 12,
               fontWeight: index === 1 ? 'bold' : 'normal',
               cursor: 'pointer',
               padding: '8px 12px',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseOver={e => {
-              e.target.style.backgroundColor = 'rgba(148, 163, 184, 0.1)'
-            }}
-            onMouseOut={e => {
-              e.target.style.backgroundColor = 'transparent'
+              borderRadius: 8,
             }}
           >
-            <div style={{
-              fontSize: '24px',
-              marginBottom: '4px',
-            }}>
-              {item.icon}
-            </div>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{item.icon}</div>
             <span>{item.label}</span>
           </button>
         ))}
       </div>
 
-      {/* 全局动画样式 */}
+      {/* 全局动画 */}
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
