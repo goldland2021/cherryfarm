@@ -1,28 +1,49 @@
-export function getTelegramUserId() {
-  // 确保 Telegram WebApp 已初始化
-  if (window.Telegram && window.Telegram.WebApp) {
-    const tg = window.Telegram.WebApp
-    
-    // 先初始化
-    tg.ready()
-    tg.expand() // 展开WebApp以获得更多空间
-    
-    // 获取用户信息
-    const user = tg.initDataUnsafe?.user
-    
-    if (user && user.id) {
-      return user.id.toString() // 转换为字符串
-    } else {
-      // 尝试从 initData 中解析
-      const initData = tg.initData
-      if (initData) {
-        console.log('initData available:', initData)
-        // 这里可以添加解析 initData 的逻辑
-        // initData 是一个查询字符串，包含用户信息
-      }
-    }
+// src/lib/useTelegramUser.js
+import { supabase } from './cherryService'
+import { getTelegramUserId } from './telegram'
+
+/**
+ * 获取用户，如果没有就创建
+ */
+export async function getOrCreateUser() {
+  const tgId = getTelegramUserId()
+  if (!tgId) return null
+
+  // 查询是否存在
+  let { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('telegram_id', tgId)
+    .maybeSingle()
+
+  if (error) {
+    console.error('Supabase get user error:', error)
+    return null
   }
-  
-  console.warn('Telegram WebApp not available')
-  return null
+
+  if (!user) {
+    // 创建新用户
+    const { data, error: insertError } = await supabase
+      .from('users')
+      .insert([{ telegram_id: tgId }])
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error('Supabase create user error:', insertError)
+      return null
+    }
+    user = data
+
+    // 同时在 farms 表创建初始记录
+    const { error: farmError } = await supabase.from('farms').insert([
+      {
+        user_id: user.id,
+        cherries: 0
+      }
+    ])
+    if (farmError) console.error('Supabase create farm error:', farmError)
+  }
+
+  return user
 }

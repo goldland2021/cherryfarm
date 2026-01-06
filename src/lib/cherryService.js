@@ -42,13 +42,11 @@ export async function pickCherry(userId) {
   // 先检查今天是否摘过
   const alreadyPicked = await hasPickedToday(userId)
   if (alreadyPicked) {
-    // 查询当前樱桃数
     const { data } = await supabase
       .from('farms')
       .select('cherries')
       .eq('user_id', userId)
       .single()
-
     return { new_cherries: data?.cherries ?? 0, picked: false }
   }
 

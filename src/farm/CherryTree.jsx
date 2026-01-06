@@ -1,66 +1,90 @@
+// src/farm/CherryTree.jsx
 import { useEffect, useState } from 'react'
-import { getTelegramUserId } from '../lib/telegram'
-import { hasPickedToday, pickCherry } from '../lib/cherryService'
+import { getOrCreateUser } from '../lib/useTelegramUser'
+import { pickCherry } from '../lib/cherryService'
 
 export default function CherryTree() {
-  const [userId, setUserId] = useState(null)
-  const [picked, setPicked] = useState(false)
-  const [adPicked, setAdPicked] = useState(false)
+  const [user, setUser] = useState(null)
   const [cherries, setCherries] = useState(0)
+  const [picked, setPicked] = useState(false)
+  const [loading, setLoading] = useState(true)
 
+  // 初始化用户 & 获取樱桃数
   useEffect(() => {
-    setUserId(getTelegramUserId())
+    async function init() {
+      const u = await getOrCreateUser()
+      if (!u) {
+        setLoading(false)
+        return
+      }
+      setUser(u)
+
+      // 查询当前樱桃数
+      const { data } = await pickCherry(u.id)
+      setCherries(data?.new_cherries ?? 0)
+      setPicked(data?.picked ?? false)
+      setLoading(false)
+    }
+
+    init()
   }, [])
 
-  useEffect(() => {
-    if (!userId) return
-    hasPickedToday(userId).then(setPicked)
-  }, [userId])
+  // 点击摘樱桃
+  async function handlePick() {
+    if (!user || picked || loading) return
+    setLoading(true)
 
-  const handleClickTree = async () => {
-    if (!userId) return
+    const result = await pickCherry(user.id)
+    setCherries(result.new_cherries)
+    setPicked(result.picked)
 
-    // 第一次免费
-    if (!picked) {
-      await pickCherry(userId)
-      setPicked(true)
-      setCherries(c => c + 1)
-      return
-    }
-
-    // 第二次（广告）
-    if (!adPicked) {
-      setAdPicked(true)
-      setCherries(c => c + 1)
-    }
+    setLoading(false)
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.count}>🍒 {cherries}</div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '16px',
+      padding: '20px',
+      fontFamily: '"Segoe UI", sans-serif',
+      color: '#fff',
+      maxWidth: '360px',
+      margin: '0 auto'
+    }}>
+      <div style={{ fontSize: '32px' }}>🍒 樱桃数: {cherries}</div>
 
-      <div style={styles.tree} onClick={handleClickTree}>
-        🌳
-      </div>
+      <button
+        onClick={handlePick}
+        disabled={!user || picked || loading}
+        style={{
+          width: '100%',
+          padding: '16px',
+          borderRadius: '12px',
+          border: 'none',
+          background: picked ? '#64748b' : '#dc2626',
+          color: '#fff',
+          fontSize: '20px',
+          fontWeight: 'bold',
+          cursor: (!user || picked) ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseOver={e => { if (!picked && user) e.target.style.transform = 'translateY(-2px)' }}
+        onMouseOut={e => e.target.style.transform = 'translateY(0)'}
+      >
+        {loading
+          ? '加载中...'
+          : picked
+            ? '✅ 今日已摘取'
+            : '摘樱桃'}
+      </button>
+
+      {!user && (
+        <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+          请在 Telegram 内打开
+        </div>
+      )}
     </div>
   )
-}
-
-const styles = {
-  wrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingTop: '60px',
-    gap: '32px',
-    userSelect: 'none',
-  },
-  count: {
-    fontSize: '26px',
-    fontWeight: 'bold',
-  },
-  tree: {
-    fontSize: '140px',
-    cursor: 'pointer',
-  },
 }
