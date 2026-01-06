@@ -1,6 +1,5 @@
 import SkyBar from './SkyBar'
 import CherryTree from './CherryTree'
-import CherryBasket from './CherryBasket'
 import FarmStatusSign from './FarmStatusSign'
 import FarmHut from './FarmHut'
 
