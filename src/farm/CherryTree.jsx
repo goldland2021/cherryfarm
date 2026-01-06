@@ -9,9 +9,10 @@ export default function CherryTree() {
   const [picked, setPicked] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 初始化用户 & 获取樱桃数
+  // 初始化用户 + 樱桃数
   useEffect(() => {
     async function init() {
+      setLoading(true)
       const u = await getOrCreateUser()
       if (!u) {
         setLoading(false)
@@ -19,13 +20,12 @@ export default function CherryTree() {
       }
       setUser(u)
 
-      // 查询当前樱桃数
-      const { data } = await pickCherry(u.id)
-      setCherries(data?.new_cherries ?? 0)
-      setPicked(data?.picked ?? false)
+      // 查询今天是否已摘
+      const { new_cherries, picked } = await pickCherry(u.id)
+      setCherries(new_cherries)
+      setPicked(picked)
       setLoading(false)
     }
-
     init()
   }, [])
 
@@ -33,11 +33,9 @@ export default function CherryTree() {
   async function handlePick() {
     if (!user || picked || loading) return
     setLoading(true)
-
-    const result = await pickCherry(user.id)
-    setCherries(result.new_cherries)
-    setPicked(result.picked)
-
+    const { new_cherries, picked: isPicked } = await pickCherry(user.id)
+    setCherries(new_cherries)
+    setPicked(isPicked)
     setLoading(false)
   }
 

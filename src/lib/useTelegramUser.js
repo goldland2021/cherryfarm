@@ -1,15 +1,15 @@
 // src/lib/useTelegramUser.js
-import { supabase } from './cherryService'
+import { supabase } from './supabaseClient'
 import { getTelegramUserId } from './telegram'
 
 /**
- * 获取用户，如果没有就创建
+ * 获取用户，如果不存在就创建
  */
 export async function getOrCreateUser() {
   const tgId = getTelegramUserId()
   if (!tgId) return null
 
-  // 查询是否存在
+  // 查询用户
   let { data: user, error } = await supabase
     .from('users')
     .select('*')
@@ -35,12 +35,9 @@ export async function getOrCreateUser() {
     }
     user = data
 
-    // 同时在 farms 表创建初始记录
+    // 创建初始 farm
     const { error: farmError } = await supabase.from('farms').insert([
-      {
-        user_id: user.id,
-        cherries: 0
-      }
+      { user_id: user.id, cherries: 0 }
     ])
     if (farmError) console.error('Supabase create farm error:', farmError)
   }
