@@ -1,11 +1,20 @@
 import SkyBar from './SkyBar'
 import CherryTree from './CherryTree'
-import FarmStatusSign from './FarmStatusSign'
-import FarmHut from './FarmHut'
+// ❌ 暂时不用的全部先注释
+// import CherryBasket from './CherryBasket'
+// import FarmStatusSign from './FarmStatusSign'
+// import FarmHut from './FarmHut'
 
 export default function FarmScene() {
   return (
-    <div style={{ paddingBottom: 40 }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#0f172a',
+        color: '#e5e7eb',
+        paddingBottom: 40,
+      }}
+    >
       <SkyBar />
 
       {/* 主视觉区 */}
@@ -19,11 +28,7 @@ export default function FarmScene() {
         }}
       >
         <CherryTree />
-        <CherryBasket />
       </div>
-
-      <FarmStatusSign />
-      <FarmHut />
     </div>
   )
 }
