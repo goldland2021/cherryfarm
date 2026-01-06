@@ -1,7 +1,6 @@
-// src/farm/CherryTree.jsx
 import { useEffect, useState } from 'react'
 import { getOrCreateUser } from '../lib/useTelegramUser'
-import { pickCherry } from '../lib/cherryService'
+import { pickCherry, hasPickedToday } from '../lib/cherryService'
 
 export default function CherryTree() {
   const [user, setUser] = useState(null)
@@ -9,10 +8,9 @@ export default function CherryTree() {
   const [picked, setPicked] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // 初始化用户 + 樱桃数
+  // 初始化 Telegram 用户
   useEffect(() => {
-    async function init() {
-      setLoading(true)
+    async function initUser() {
       const u = await getOrCreateUser()
       if (!u) {
         setLoading(false)
@@ -20,16 +18,29 @@ export default function CherryTree() {
       }
       setUser(u)
 
-      // 查询今天是否已摘
-      const { new_cherries, picked } = await pickCherry(u.id)
-      setCherries(new_cherries)
-      setPicked(picked)
+      // 查询今天是否摘过
+      const pickedToday = await hasPickedToday(u.id)
+      setPicked(pickedToday)
+
+      // 查询当前樱桃数
+      const { data, error } = await fetchCurrentCherries(u.id)
+      if (!error) setCherries(data?.cherries ?? 0)
+
       setLoading(false)
     }
-    init()
+    initUser()
   }, [])
 
-  // 点击摘樱桃
+  async function fetchCurrentCherries(userId) {
+    try {
+      const { data, error } = await getOrCreateUserCherries(userId)
+      return { data, error }
+    } catch (e) {
+      console.error(e)
+      return { data: null, error: e }
+    }
+  }
+
   async function handlePick() {
     if (!user || picked || loading) return
     setLoading(true)
@@ -68,8 +79,6 @@ export default function CherryTree() {
           cursor: (!user || picked) ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s ease',
         }}
-        onMouseOver={e => { if (!picked && user) e.target.style.transform = 'translateY(-2px)' }}
-        onMouseOut={e => e.target.style.transform = 'translateY(0)'}
       >
         {loading
           ? '加载中...'
@@ -79,7 +88,7 @@ export default function CherryTree() {
       </button>
 
       {!user && (
-        <div style={{ fontSize: '14px', color: '#94a3b8' }}>
+        <div style={{ fontSize: '14px', color: '#94a3b8', textAlign: 'center' }}>
           请在 Telegram 内打开
         </div>
       )}
