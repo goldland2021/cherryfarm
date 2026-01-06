@@ -6,7 +6,6 @@ export default function CherryTree() {
   const [userId, setUserId] = useState(null)
   const [picked, setPicked] = useState(false)
   const [adPicked, setAdPicked] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [cherries, setCherries] = useState(0)
 
   useEffect(() => {
@@ -14,52 +13,35 @@ export default function CherryTree() {
   }, [])
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false)
-      return
-    }
-    hasPickedToday(userId).then(r => {
-      setPicked(r)
-      setLoading(false)
-    })
+    if (!userId) return
+    hasPickedToday(userId).then(setPicked)
   }, [userId])
 
-  const handlePick = async () => {
-    if (picked || loading) return
-    setLoading(true)
-    await pickCherry(userId)
-    setPicked(true)
-    setCherries(c => c + 1)
-    setLoading(false)
-  }
+  const handleClickTree = async () => {
+    if (!userId) return
 
-  const handleAdPick = () => {
-    if (adPicked) return
-    setAdPicked(true)
-    setCherries(c => c + 1)
+    // 第一次免费
+    if (!picked) {
+      await pickCherry(userId)
+      setPicked(true)
+      setCherries(c => c + 1)
+      return
+    }
+
+    // 第二次（广告）
+    if (!adPicked) {
+      setAdPicked(true)
+      setCherries(c => c + 1)
+    }
   }
 
   return (
     <div style={styles.wrap}>
       <div style={styles.count}>🍒 {cherries}</div>
 
-      <div style={styles.tree}>🌳</div>
-
-      {!picked && (
-        <button style={styles.button} onClick={handlePick}>
-          点击摘樱桃
-        </button>
-      )}
-
-      {picked && !adPicked && (
-        <button style={styles.button} onClick={handleAdPick}>
-          看广告再摘一次
-        </button>
-      )}
-
-      {picked && adPicked && (
-        <div style={styles.done}>今天结束</div>
-      )}
+      <div style={styles.tree} onClick={handleClickTree}>
+        🌳
+      </div>
     </div>
   )
 }
@@ -69,24 +51,16 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    padding: '40px 0',
+    paddingTop: '60px',
+    gap: '32px',
+    userSelect: 'none',
   },
   count: {
-    fontSize: '24px',
+    fontSize: '26px',
     fontWeight: 'bold',
   },
   tree: {
-    fontSize: '120px',
-  },
-  button: {
-    padding: '14px 28px',
-    fontSize: '16px',
-    borderRadius: '10px',
+    fontSize: '140px',
     cursor: 'pointer',
-  },
-  done: {
-    fontSize: '14px',
-    opacity: 0.6,
   },
 }
