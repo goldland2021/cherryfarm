@@ -1,54 +1,31 @@
 import { supabase } from './supabaseClient'
 
-/**
- * 判断用户今天是否已摘樱桃
- * @param {{id:number, username:string}} user
- * @returns {Promise<boolean>}
- */
-export async function hasPickedToday(user) {
-  const today = new Date().toISOString().slice(0, 10)
+// 🍒 新增一颗樱桃（= 插入一条记录）
+export async function addCherry(user) {
+  const { error } = await supabase
+    .from('cherry_picks')
+    .insert({
+      user_id: user.id,
+      username: user.username
+    })
+
+  if (error) {
+    console.error('❌ addCherry error', error)
+    throw error
+  }
+}
+
+// 🍒 获取用户樱桃总数
+export async function getCherryCount(userId) {
   const { count, error } = await supabase
     .from('cherry_picks')
     .select('id', { head: true, count: 'exact' })
-    .eq('user_id', user.id)
-    .eq('picked_at', today)
+    .eq('user_id', userId)
 
   if (error) {
-    console.error('hasPickedToday error:', error)
-    return false
-  }
-
-  return count > 0
-}
-
-/**
- * 用户摘樱桃
- * @param {{id:number, username:string}} user
- * @returns {Promise<number>} 用户总樱桃数
- */
-export async function pickCherry(user) {
-  const today = new Date().toISOString().slice(0, 10)
-
-  // 插入今日记录
-  const { error } = await supabase.from('cherry_picks').insert([
-    { user_id: user.id, username: user.username ?? null, picked_at: today }
-  ])
-
-  if (error) {
-    console.error('pickCherry error:', error)
-    throw error
-  }
-
-  // 查询总樱桃数
-  const { count, error: fetchError } = await supabase
-    .from('cherry_picks')
-    .select('id', { head: true, count: 'exact' })
-    .eq('user_id', user.id)
-
-  if (fetchError) {
-    console.error('fetch cherries count error:', fetchError)
+    console.error('❌ getCherryCount error', error)
     return 0
   }
 
-  return count ?? 0
+  return count || 0
 }
