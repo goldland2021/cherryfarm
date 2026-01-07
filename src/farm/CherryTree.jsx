@@ -1,66 +1,93 @@
-import { supabase } from './supabaseClient'
+import { useEffect, useState } from 'react'
+import { useTelegramUser } from '../lib/useTelegramUser'
+import { hasPickedToday, pickCherry } from '../lib/cherryService'
 
-/**
- * 获取或创建农场
- */
-export async function getOrCreateFarm(user) {
-  const { data, error } = await supabase
-    .from('farms')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
+export default function CherryTree() {
+  const [user, setUser] = useState(null)
+  const [picked, setPicked] = useState(false)
+  const [cherries, setCherries] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  if (data) return data
+  // 获取 Telegram 用户信息
+  useEffect(() => {
+    const tgUser = useTelegramUser()
+    setUser(tgUser)
+  }, [])
 
-  const { data: created, error: insertError } = await supabase
-    .from('farms')
-    .insert({
-      user_id: user.id,
-      username: user.username,
-      cherry_count: 0
-    })
-    .select()
-    .single()
+  // 查询今天是否已摘
+  useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
-  if (insertError) {
-    console.error('❌ create farm error', insertError)
-    throw insertError
+    let alive = true
+
+    async function checkPicked() {
+      const result = await hasPickedToday(user)
+      if (alive) setPicked(result)
+
+      // 同步显示总樱桃数
+      const total = await fetchTotalCherries(user)
+      if (alive) setCherries(total)
+
+      setLoading(false)
+    }
+
+    checkPicked()
+    return () => (alive = false)
+  }, [user])
+
+  async function fetchTotalCherries(user) {
+    const { count, error } = await pickCherryCount(user)
+    return count ?? 0
   }
 
-  return created
-}
-
-/**
- * 🍒 摘一颗樱桃（稳定版）
- */
-export async function pickCherry(userId) {
-  // 1️⃣ 先取当前值
-  const { data: farm, error: selectError } = await supabase
-    .from('farms')
-    .select('cherry_count')
-    .eq('user_id', userId)
-    .single()
-
-  if (selectError) {
-    console.error('❌ select farm error', selectError)
-    throw selectError
+  // 新增函数: 只获取总樱桃数，不插入
+  async function pickCherryCount(user) {
+    const { count, error } = await import('../lib/supabaseClient').then(m =>
+      m.supabase
+        .from('cherry_picks')
+        .select('id', { head: true, count: 'exact' })
+        .eq('user_id', user.id)
+    )
+    return { count, error }
   }
 
-  const nextCount = farm.cherry_count + 1
+  async function handlePick() {
+    if (!user || picked || loading) return
 
-  // 2️⃣ 更新
-  const { error: updateError } = await supabase
-    .from('farms')
-    .update({
-      cherry_count: nextCount,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', userId)
-
-  if (updateError) {
-    console.error('❌ update farm error', updateError)
-    throw updateError
+    setLoading(true)
+    try {
+      const total = await pickCherry(user)
+      setCherries(total)
+      setPicked(true)
+    } catch (e) {
+      console.error(e)
+    }
+    setLoading(false)
   }
 
-  return nextCount
+  return (
+    <div style={{ textAlign: 'center', padding: 20 }}>
+      <div style={{ fontSize: 48 }}>🌳</div>
+      <div style={{ fontSize: 24, margin: 12 }}>🍒 樱桃数: {cherries}</div>
+
+      <button
+        onClick={handlePick}
+        disabled={loading || picked || !user}
+        style={{
+          padding: '12px 24px',
+          fontSize: 18,
+          borderRadius: 12,
+          cursor: loading || picked ? 'not-allowed' : 'pointer',
+          backgroundColor: picked ? '#64748b' : '#dc2626',
+          color: 'white',
+          border: 'none',
+        }}
+      >
+        {loading ? '加载中...' : picked ? '今日已摘' : '摘樱桃'}
+      </button>
+    </div>
+  )
 }
