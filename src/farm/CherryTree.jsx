@@ -42,4 +42,25 @@ export async function pickCherry(userId) {
     .single()
 
   if (selectError) {
-    console.error('❌
+    console.error('❌ select farm error', selectError)
+    throw selectError
+  }
+
+  const nextCount = farm.cherry_count + 1
+
+  // 2️⃣ 更新
+  const { error: updateError } = await supabase
+    .from('farms')
+    .update({
+      cherry_count: nextCount,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId)
+
+  if (updateError) {
+    console.error('❌ update farm error', updateError)
+    throw updateError
+  }
+
+  return nextCount
+}
