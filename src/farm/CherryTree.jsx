@@ -1,60 +1,45 @@
-import { useEffect, useState } from 'react'
-import { getTelegramUser } from '../lib/useTelegramUser'
-import { addCherry, getCherryCount } from '../lib/cherryService'
+import { supabase } from './supabaseClient'
 
-export default function CherryTree() {
-  const [user, setUser] = useState(null)
-  const [cherries, setCherries] = useState(0)
-  const [loading, setLoading] = useState(true)
+/**
+ * 获取或创建农场
+ */
+export async function getOrCreateFarm(user) {
+  const { data, error } = await supabase
+    .from('farms')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
 
-  // 初始化
-  useEffect(() => {
-    const u = getTelegramUser()
-    if (!u) {
-      console.warn('❌ Telegram user not ready')
-      setLoading(false)
-      return
-    }
+  if (data) return data
 
-    setUser(u)
-
-    getCherryCount(u.id).then(count => {
-      setCherries(count)
-      setLoading(false)
+  const { data: created, error: insertError } = await supabase
+    .from('farms')
+    .insert({
+      user_id: user.id,
+      username: user.username,
+      cherry_count: 0
     })
-  }, [])
+    .select()
+    .single()
 
-  async function handlePick() {
-    if (!user || loading) return
-
-    setLoading(true)
-    try {
-      await addCherry(user)              // 👉 插一条
-      const count = await getCherryCount(user.id) // 👉 再查
-      setCherries(count)
-    } catch (e) {
-      alert('摘樱桃失败，查看控制台')
-    }
-    setLoading(false)
+  if (insertError) {
+    console.error('❌ create farm error', insertError)
+    throw insertError
   }
 
-  if (!user) return <div>未获取 Telegram 用户</div>
-
-  return (
-    <div style={{ textAlign: 'center', padding: 20 }}>
-      <div style={{ fontSize: 22 }}>🍒 樱桃数：{cherries}</div>
-
-      <button
-        onClick={handlePick}
-        disabled={loading}
-        style={{
-          marginTop: 12,
-          padding: '10px 24px',
-          fontSize: 16
-        }}
-      >
-        {loading ? '处理中...' : '摘樱桃'}
-      </button>
-    </div>
-  )
+  return created
 }
+
+/**
+ * 🍒 摘一颗樱桃（稳定版）
+ */
+export async function pickCherry(userId) {
+  // 1️⃣ 先取当前值
+  const { data: farm, error: selectError } = await supabase
+    .from('farms')
+    .select('cherry_count')
+    .eq('user_id', userId)
+    .single()
+
+  if (selectError) {
+    console.error('❌
