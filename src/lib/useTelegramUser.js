@@ -1,33 +1,55 @@
 import { useState, useEffect } from 'react'
+import { getTelegramUser, isInTelegram } from './telegram'
 
 /**
- * 获取 Telegram 用户信息的 Hook
+ * 自定义 Hook: 获取 Telegram 用户信息
  */
 export function useTelegramUser() {
   const [user, setUser] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isInTelegramEnv, setIsInTelegramEnv] = useState(false)
 
   useEffect(() => {
-    // 确保在客户端执行
-    if (typeof window === 'undefined') return
+    const checkTelegram = async () => {
+      setIsLoading(true)
+      
+      // 检查是否在 Telegram 环境中
+      const inTelegram = isInTelegram()
+      setIsInTelegramEnv(inTelegram)
 
-    const tg = window.Telegram?.WebApp
-    if (!tg) {
-      console.warn('Telegram WebApp not found')
-      return
+      if (inTelegram) {
+        // 如果在 Telegram 中，获取用户信息
+        const tgUser = getTelegramUser()
+        setUser(tgUser)
+      } else {
+        // 不在 Telegram 中，设置模拟用户用于开发
+        setUser(getMockUser())
+      }
+
+      setIsLoading(false)
     }
 
-    // 初始化 Telegram WebApp
-    tg.ready()
-    tg.expand()  // 建议展开应用以使用全屏
-
-    const userData = tg.initDataUnsafe?.user
-    if (userData?.id) {
-      setUser({
-        id: userData.id,
-        username: userData.username || `用户${userData.id}`
-      })
-    }
+    checkTelegram()
   }, [])
 
-  return user
+  return {
+    user,
+    isLoading,
+    isInTelegramEnv,
+    isAuthenticated: !!user
+  }
+}
+
+// 开发环境模拟用户
+function getMockUser() {
+  if (import.meta.env.DEV) {
+    return {
+      id: Math.floor(Math.random() * 1000000),
+      username: `dev_user_${Math.floor(Math.random() * 1000)}`,
+      first_name: 'Development',
+      last_name: 'User',
+      language_code: 'en'
+    }
+  }
+  return null
 }

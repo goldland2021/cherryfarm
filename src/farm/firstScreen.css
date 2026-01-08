@@ -1,99 +1,182 @@
-.first-screen {
-    max-width: 360px;
-    margin: 0 auto;
-    padding: 32px 20px;
-    min-height: 100vh;
-    background: linear-gradient(180deg, #f7fff7, #e8f5e9);
+.sky-bar {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.sky-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.2;
+  z-index: 0;
+}
+
+.sky-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.weather-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  min-width: 120px;
+}
+
+.weather-icon {
+  font-size: 1.5rem;
+  animation: weatherFloat 3s ease-in-out infinite;
+}
+
+.weather-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.time-info {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  min-width: 140px;
+}
+
+.current-time {
+  font-size: 1.5rem;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+}
+
+.current-date {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  margin-top: 0.25rem;
+}
+
+.farm-title {
+  text-align: center;
+  flex-grow: 1;
+}
+
+.farm-title h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-top: 0.25rem;
+}
+
+.clouds {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.cloud {
+  position: absolute;
+  font-size: 2.5rem;
+  opacity: 0.4;
+  animation: cloudFloat 20s linear infinite;
+}
+
+.cloud1 {
+  top: 20%;
+  left: -50px;
+  animation-delay: 0s;
+}
+
+.cloud2 {
+  top: 40%;
+  left: -80px;
+  animation-delay: -5s;
+  font-size: 2rem;
+}
+
+.cloud3 {
+  top: 60%;
+  left: -60px;
+  animation-delay: -10s;
+  font-size: 3rem;
+}
+
+@keyframes cloudFloat {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(100px) translateY(5px);
+  }
+  50% {
+    transform: translateX(200px) translateY(0);
+  }
+  75% {
+    transform: translateX(300px) translateY(5px);
+  }
+  100% {
+    transform: translateX(400px) translateY(0);
+  }
+}
+
+@keyframes weatherFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .sky-bar {
+    padding: 1rem;
+  }
+  
+  .sky-content {
+    flex-direction: column;
     text-align: center;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont;
+    gap: 1rem;
   }
   
-  .game-title {
-    font-size: 22px;
-    font-weight: 800;
-    margin-bottom: 6px;
+  .farm-title h1 {
+    font-size: 1.5rem;
   }
   
-  .subtitle {
-    color: #666;
-    font-size: 14px;
-    margin-bottom: 24px;
-  }
-  
-  .tree {
-    font-size: 140px;
-    margin: 20px 0;
-    transition: all 0.4s ease;
-  }
-  
-  .tree-ready {
-    filter: drop-shadow(0 0 18px rgba(255, 80, 80, 0.6));
-    transform: scale(1.05);
-  }
-  
-  .reward-box {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  
-  .reward-item {
-    background: #fff;
-    border-radius: 14px;
-    padding: 10px 16px;
-    font-size: 16px;
-    font-weight: 700;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  }
-  
-  .main-btn {
+  .weather-info,
+  .time-info {
     width: 100%;
-    padding: 18px;
-    border-radius: 16px;
-    border: none;
-    font-size: 20px;
-    font-weight: 800;
-    color: #000;
-    background: linear-gradient(135deg, #ffd166, #ffb703);
-    cursor: pointer;
-    box-shadow: 0 0 0 rgba(255,183,3,0.6);
-    animation: breathe 1.8s infinite;
+    max-width: 200px;
+    margin: 0 auto;
   }
   
-  .main-btn.loading {
-    animation: none;
-    opacity: 0.7;
+  .cloud {
+    font-size: 1.5rem;
   }
-  
-  .pick-btn {
-    width: 100%;
-    margin-top: 16px;
-    padding: 18px;
-    border-radius: 16px;
-    border: none;
-    font-size: 20px;
-    font-weight: 800;
-    color: white;
-    background: linear-gradient(135deg, #e63946, #d00000);
-    box-shadow: 0 8px 16px rgba(230,57,70,0.4);
-  }
-  
-  .done-tip {
-    margin-top: 16px;
-    color: #2e7d32;
-    font-weight: 600;
-  }
-  
-  .limit-tip {
-    margin-top: 24px;
-    font-size: 12px;
-    color: #888;
-  }
-  
-  @keyframes breathe {
-    0%   { box-shadow: 0 0 0 0 rgba(255,183,3,0.6); }
-    70%  { box-shadow: 0 0 0 14px rgba(255,183,3,0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,183,3,0); }
-  }
-  
+}

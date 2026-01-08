@@ -1,0 +1,270 @@
+.cherry-tree-container {
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    margin: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .cherry-tree-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(30, 64, 175, 0.1) 0%, transparent 70%);
+    z-index: 0;
+  }
+  
+  .tree-animation {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 2rem;
+  }
+  
+  .tree {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+    display: inline-block;
+  }
+  
+  .tree.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  .cherries {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  
+  .cherry {
+    font-size: 1.5rem;
+    position: absolute;
+    animation: swing 2s ease-in-out infinite;
+  }
+  
+  .cherry:nth-child(1) { left: 20%; animation-delay: 0s; }
+  .cherry:nth-child(2) { left: 30%; animation-delay: 0.2s; }
+  .cherry:nth-child(3) { left: 50%; animation-delay: 0.4s; }
+  .cherry:nth-child(4) { left: 70%; animation-delay: 0.6s; }
+  .cherry:nth-child(5) { right: 20%; animation-delay: 0.8s; }
+  
+  .pick-animation {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    animation: sparkle 1s ease-out;
+  }
+  
+  .success-animation {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    color: #10b981;
+    animation: bounceIn 0.5s ease-out;
+  }
+  
+  .error-animation {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: #ef4444;
+    animation: shake 0.5s ease-out;
+  }
+  
+  .stats {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #f8fafc;
+  }
+  
+  .stat-value.streak {
+    color: #fbbf24;
+  }
+  
+  .pick-button {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    font-size: 1.25rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    margin-top: 1rem;
+  }
+  
+  .pick-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+    z-index: -1;
+  }
+  
+  .pick-button:hover:not(:disabled)::before {
+    left: 100%;
+  }
+  
+  .pick-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+  }
+  
+  .pick-button:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  .pick-button.picked {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    box-shadow: 0 4px 15px rgba(100, 116, 139, 0.4);
+    cursor: not-allowed;
+  }
+  
+  .pick-button:disabled:not(.picked) {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  }
+  
+  .pick-button.picking {
+    animation: buttonPulse 1s ease-in-out infinite;
+  }
+  
+  .error-message {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .user-info {
+    margin-top: 1.5rem;
+    color: #94a3b8;
+    font-size: 0.875rem;
+  }
+  
+  .loading-text {
+    color: #94a3b8;
+    font-size: 1rem;
+    margin-top: 1rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  /* 动画定义 */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes swing {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-5px) rotate(5deg); }
+    75% { transform: translateY(-5px) rotate(-5deg); }
+  }
+  
+  @keyframes sparkle {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  }
+  
+  @keyframes bounceIn {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    70% { transform: translate(-50%, -50%) scale(0.9); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+  }
+  
+  @keyframes shake {
+    0%, 100% { transform: translate(-50%, -50%); }
+    25% { transform: translate(-55%, -50%); }
+    75% { transform: translate(-45%, -50%); }
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  @keyframes buttonPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+  }
+  
+  /* 响应式设计 */
+  @media (max-width: 640px) {
+    .cherry-tree-container {
+      padding: 1.5rem;
+      margin: 0.5rem;
+    }
+    
+    .tree {
+      font-size: 4rem;
+    }
+    
+    .stats {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .pick-button {
+      width: 100%;
+      padding: 0.875rem;
+      font-size: 1.125rem;
+    }
+  }
