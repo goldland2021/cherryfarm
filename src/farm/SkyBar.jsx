@@ -1,9 +1,4 @@
-/**
- * 顶部导航栏组件
- * @param {number} totalCherries 累计樱桃数
- * @param {Function} onWatchAd 看广告按钮点击事件
- */
-export default function SkyBar({ totalCherries, onWatchAd }) {
+export default function SkyBar({ totalCherries, onWatchAd, isLoading }) {
   return (
     <div
       style={{
@@ -17,15 +12,12 @@ export default function SkyBar({ totalCherries, onWatchAd }) {
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         position: 'sticky',
         top: 0,
-        zIndex: 100, // 确保导航栏在最上层
+        zIndex: 100,
       }}
     >
-      {/* 左侧标题 */}
       <h1 style={{ color: '#f87171', margin: 0, fontSize: 22, fontWeight: 600 }}>🍒 樱桃农场</h1>
       
-      {/* 右侧：樱桃数 + 广告按钮 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* 累计樱桃数展示 */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -41,30 +33,23 @@ export default function SkyBar({ totalCherries, onWatchAd }) {
           <span>{totalCherries}</span>
         </div>
         
-        {/* 看广告加采摘次数按钮 */}
         <button
           onClick={onWatchAd}
+          disabled={isLoading}
           style={{
             padding: '6px 12px',
             fontSize: 14,
             borderRadius: 16,
-            backgroundColor: '#f59e0b', // 橙色突出广告按钮
+            backgroundColor: '#f59e0b',
             color: 'white',
             border: 'none',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.opacity = 0.9;
-            e.target.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.opacity = 1;
-            e.target.style.transform = 'scale(1)';
+            opacity: isLoading ? 0.7 : 1,
           }}
         >
-          看广告加次数
+          {isLoading ? '加载中...' : '看广告加次数'}
         </button>
       </div>
     </div>

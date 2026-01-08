@@ -1,76 +1,47 @@
 import { useEffect, useState } from 'react';
-// 导入樱桃服务（采摘、统计逻辑）
-import { getTodayPickedCount, pickCherry } from '../lib/cherryService';
-// 导入樱桃树图片（路径请根据实际存放位置调整）
+import { pickCherry, getUserDailyCounts } from '../lib/cherryService';
 import CherryTreeImg from '../assets/cherry-tree.png';
 
-/**
- * 樱桃树采摘组件
- * @param {object} user Telegram用户信息 { id, username }
- * @param {number} totalCherries 累计樱桃数
- * @param {number} basePickTimes 每日基础可采摘次数
- * @param {number} extraPickTimes 广告额外可采摘次数
- * @param {Function} onUpdateTotalCherries 更新累计樱桃数的回调
- */
 export default function CherryTree({
   user,
   totalCherries,
   basePickTimes,
-  extraPickTimes,
-  onUpdateTotalCherries
+  dailyCounts,
+  onUpdateTotalCherries,
+  isLoading
 }) {
-  // 今日已采摘次数
-  const [todayPickedCount, setTodayPickedCount] = useState(0);
-  // 加载状态
-  const [isLoading, setIsLoading] = useState(false);
-  // 今日可采摘总上限 = 基础次数 + 广告额外次数
-  const maxPickTimes = basePickTimes + extraPickTimes;
+  const [localCounts, setLocalCounts] = useState(dailyCounts);
+  const [btnLoading, setBtnLoading] = useState(false);
 
-  // 初始化：加载用户今日已采摘次数
+  // 同步数据库次数
   useEffect(() => {
-    if (!user) return;
+    setLocalCounts(dailyCounts);
+  }, [dailyCounts]);
 
-    const loadTodayPickedCount = async () => {
-      setIsLoading(true);
-      try {
-        // 调用服务获取今日已摘次数
-        const count = await getTodayPickedCount(user);
-        setTodayPickedCount(count);
-      } catch (error) {
-        console.error('加载今日采摘次数失败:', error);
-        alert('⚠️ 加载数据失败，请刷新重试');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // 今日可采摘总上限（数据库防刷锁控制）
+  const maxPickTimes = localCounts.maxDailyPick;
+  const canPick = !isLoading && !btnLoading && user && localCounts.todayPickedCount < maxPickTimes;
 
-    loadTodayPickedCount();
-  }, [user]);
-
-  // 采摘樱桃按钮点击事件
+  // 采摘逻辑（带数据库防刷）
   const handlePickCherry = async () => {
-    // 禁用条件：加载中、无用户、今日已摘满
-    if (isLoading || !user || todayPickedCount >= maxPickTimes) return;
+    if (!canPick) return;
+    setBtnLoading(true);
 
-    setIsLoading(true);
     try {
-      // 调用采摘逻辑，获取最新累计樱桃数
       const newTotal = await pickCherry(user);
-      // 更新今日已摘次数
-      setTodayPickedCount(prev => prev + 1);
-      // 通知父组件更新累计樱桃数（同步到顶部）
       onUpdateTotalCherries(newTotal);
-      // 采摘成功提示
+      // 同步最新次数
+      const latestCounts = await getUserDailyCounts(user);
+      setLocalCounts(latestCounts);
       alert('✅ 采摘成功！收获1个樱桃～');
     } catch (error) {
-      alert(`❌ 采摘失败：${error.message}`);
+      alert(error.message);
     } finally {
-      setIsLoading(false);
+      setBtnLoading(false);
     }
   };
 
-  // 加载中/无用户状态UI
-  if (!user || isLoading) {
+  if (isLoading || !user) {
     return (
       <div style={{ textAlign: 'center', padding: 20 }}>
         <img
@@ -89,12 +60,8 @@ export default function CherryTree({
     );
   }
 
-  // 判断是否可采摘
-  const canPick = todayPickedCount < maxPickTimes;
-
   return (
     <div style={{ textAlign: 'center', padding: 20, width: '100%', maxWidth: '400px' }}>
-      {/* 卡通樱桃树图片 */}
       <img
         src={CherryTreeImg}
         alt="挂满樱桃的树"
@@ -109,7 +76,7 @@ export default function CherryTree({
         onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
       />
       
-      {/* 今日采摘次数提示（含广告额外次数说明） */}
+      {/* 防刷提示：显示数据库控制的最大次数 */}
       <div style={{
         fontSize: 18,
         margin: 8,
@@ -120,16 +87,14 @@ export default function CherryTree({
         display: 'inline-block',
         boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
       }}>
-        今日可摘: {todayPickedCount}/{maxPickTimes} 次
-        {/* 有额外次数时显示标注 */}
-        {extraPickTimes > 0 && (
+        今日可摘: {localCounts.todayPickedCount}/{maxPickTimes} 次
+        {localCounts.extraPickTimes > 0 && (
           <span style={{ color: '#f59e0b', marginLeft: 8, fontWeight: 500 }}>
-            （含{extraPickTimes}次广告奖励）
+            （含{localCounts.extraPickTimes}次广告奖励）
           </span>
         )}
       </div>
 
-      {/* 采摘按钮 */}
       <button
         onClick={handlePickCherry}
         disabled={!canPick}
@@ -145,11 +110,10 @@ export default function CherryTree({
           marginTop: 30,
           width: '100%',
           boxShadow: canPick ? '0 4px 12px rgba(220, 38, 38, 0.4)' : 'none',
+          opacity: btnLoading ? 0.8 : 1,
         }}
-        onMouseEnter={(e) => canPick && (e.target.style.transform = 'scale(1.02)')}
-        onMouseLeave={(e) => canPick && (e.target.style.transform = 'scale(1)')}
       >
-        {todayPickedCount >= maxPickTimes ? '今日已摘完' : '摘樱桃'}
+        {btnLoading ? '采摘中...' : (localCounts.todayPickedCount >= maxPickTimes ? '今日已摘完' : '摘樱桃')}
       </button>
     </div>
   );

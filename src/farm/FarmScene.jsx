@@ -1,152 +1,137 @@
 import { useState, useEffect } from 'react';
-// 导入子组件
 import SkyBar from './SkyBar';
 import CherryTree from './CherryTree';
-// 导入农场背景图（路径请根据实际存放位置调整）
 import FarmBg from '../assets/farm-bg.png';
-// 导入Supabase客户端（仅用于读取累计樱桃数）
 import { supabase } from '../lib/supabaseClient';
+import { 
+  CONFIG, 
+  initUserInDB, 
+  watchAdAddPickTimes, 
+  getTotalCherries, 
+  getUserDailyCounts 
+} from '../lib/cherryService';
 
 export default function FarmScene() {
-  // 核心状态
-  const [user, setUser] = useState(null); // Telegram用户信息
-  const [totalCherries, setTotalCherries] = useState(0); // 累计樱桃数
-  const [adCountToday, setAdCountToday] = useState(0); // 今日已看广告次数
-  const [extraPickTimes, setExtraPickTimes] = useState(0); // 广告额外可采摘次数
+  const [user, setUser] = useState(null);
+  const [totalCherries, setTotalCherries] = useState(0);
+  const [dailyCounts, setDailyCounts] = useState({
+    todayPickedCount: 0,
+    todayAdCount: 0,
+    maxDailyPick: CONFIG.MAX_DAILY_PICK,
+    extraPickTimes: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 配置常量（可按需调整）
-  const CONFIG = {
-    BASE_PICK_TIMES: 5, // 每日基础可采摘次数
-    MAX_AD_COUNT: 3, // 每日最多看广告次数
-    AD_REWARD_TIMES: 1, // 每次广告奖励的采摘次数
-    LOCAL_STORAGE_KEY: 'cherry_farm_ad_data' // 本地存储广告数据的key
-  };
-
-  // 初始化：读取用户信息、累计樱桃数、今日广告数据
+  // 初始化：读取用户+数据库防刷数据
   useEffect(() => {
-    // 1. 获取Telegram Mini App用户信息
-    const getTelegramUser = () => {
-      const tg = window.Telegram?.WebApp;
-      if (tg && tg.initDataUnsafe?.user) {
+    const init = async () => {
+      try {
+        // 1. 获取Telegram用户
+        const tg = window.Telegram?.WebApp;
+        if (!tg || !tg.initDataUnsafe?.user) {
+          throw new Error('请在Telegram中打开此应用！');
+        }
         const telegramUser = {
           id: tg.initDataUnsafe.user.id,
           username: tg.initDataUnsafe.user.username || '未知用户'
         };
         setUser(telegramUser);
-        // 获取用户累计樱桃数（统计cherry_picks表记录数）
-        getTotalCherries(telegramUser);
-      } else {
-        alert('⚠️ 请在Telegram中打开此应用！');
-      }
-    };
 
-    // 2. 读取用户累计樱桃数
-    const getTotalCherries = async (userInfo) => {
-      try {
-        const { count, error } = await supabase
-          .from('cherry_picks')
-          .select('id', { head: true, count: 'exact' })
-          .eq('user_id', userInfo.id);
-        if (error) throw error;
-        setTotalCherries(count || 0);
+        // 2. 初始化数据库用户（防刷基础）
+        await initUserInDB(telegramUser);
+
+        // 3. 获取累计樱桃数+今日次数（防刷校验）
+        const [total, counts] = await Promise.all([
+          getTotalCherries(telegramUser),
+          getUserDailyCounts(telegramUser)
+        ]);
+        setTotalCherries(total);
+        setDailyCounts(counts);
       } catch (error) {
-        console.error('获取累计樱桃数失败:', error);
-        setTotalCherries(0);
+        alert(`初始化失败：${error.message}`);
+        console.error('防刷初始化失败:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-
-    // 3. 读取今日广告数据（本地存储，无需同步数据库）
-    const getAdDataFromLocal = () => {
-      const today = new Date().toLocaleDateString();
-      const savedData = localStorage.getItem(CONFIG.LOCAL_STORAGE_KEY);
-      
-      if (savedData) {
-        const { date, adCount, extraTimes } = JSON.parse(savedData);
-        // 仅当日期为今日时，恢复广告数据
-        if (date === today) {
-          setAdCountToday(adCount);
-          setExtraPickTimes(extraTimes);
-        }
-      }
-    };
-
-    // 执行初始化逻辑
-    getTelegramUser();
-    getAdDataFromLocal();
+    init();
   }, []);
 
-  // 更新累计樱桃数的回调（供CherryTree组件调用）
+  // 更新累计樱桃数
   const handleUpdateTotalCherries = (newTotal) => {
     setTotalCherries(newTotal);
+    // 同步更新今日已摘次数
+    setDailyCounts(prev => ({
+      ...prev,
+      todayPickedCount: prev.todayPickedCount + 1
+    }));
   };
 
-  // 看广告增加可采摘次数的核心逻辑
-  const handleWatchAd = () => {
-    // 前置校验
-    if (!user) {
-      alert('⚠️ 请先登录Telegram账号！');
-      return;
-    }
-    if (adCountToday >= CONFIG.MAX_AD_COUNT) {
-      alert(`📢 今日已看${CONFIG.MAX_AD_COUNT}次广告，明天再来吧～`);
-      return;
-    }
+  // 看广告增加次数（带数据库防刷）
+  const handleWatchAd = async () => {
+    if (isLoading || !user) return;
+    setIsLoading(true);
 
-    // MVP阶段：模拟广告播放（5秒）
-    alert(`🎬 正在播放广告...（5秒后关闭）\n广告完成后可额外采摘${CONFIG.AD_REWARD_TIMES}次！`);
-    
-    setTimeout(() => {
-      // 计算新的广告次数和额外采摘次数
-      const newAdCount = adCountToday + 1;
-      const newExtraTimes = extraPickTimes + CONFIG.AD_REWARD_TIMES;
+    try {
+      alert(`🎬 正在播放广告...（5秒后关闭）\n广告完成后可额外采摘${CONFIG.AD_REWARD_TIMES}次！`);
+      // 模拟广告播放
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // 数据库层面更新广告次数（带防刷校验）
+      const adResult = await watchAdAddPickTimes(user);
       
-      // 更新状态
-      setAdCountToday(newAdCount);
-      setExtraPickTimes(newExtraTimes);
-      
-      // 保存到本地存储（每日自动重置）
-      const today = new Date().toLocaleDateString();
-      localStorage.setItem(
-        CONFIG.LOCAL_STORAGE_KEY,
-        JSON.stringify({
-          date: today,
-          adCount: newAdCount,
-          extraTimes: newExtraTimes
-        })
-      );
-      
-      // 广告完成提示
-      alert(`✅ 广告看完啦！\n额外获得${CONFIG.AD_REWARD_TIMES}次采摘机会，今日最多可摘${CONFIG.BASE_PICK_TIMES + newExtraTimes}次～`);
-    }, 5000); // 模拟5秒广告时长
+      // 更新前端状态
+      setDailyCounts(prev => ({
+        ...prev,
+        todayAdCount: adResult.adCount,
+        extraPickTimes: adResult.extraPickTimes
+      }));
+
+      alert(`✅ 广告看完啦！\n今日已看${adResult.adCount}/${CONFIG.MAX_AD_COUNT}次广告，额外获得${CONFIG.AD_REWARD_TIMES}次采摘机会～`);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#0f172a'
+      }}>
+        <div style={{ fontSize: 20, color: '#e5e7eb' }}>加载中...（防刷校验中）</div>
+      </div>
+    );
+  }
 
   return (
     <div
       style={{
         minHeight: '100vh',
-        // 背景图样式
         backgroundImage: `url(${FarmBg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
-        // 半透明遮罩，提升内容可读性
         backgroundColor: 'rgba(15, 23, 42, 0.85)',
         backgroundBlendMode: 'overlay',
-        // 布局样式
         color: '#e5e7eb',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
       }}
     >
-      {/* 顶部导航栏 */}
       <SkyBar
         totalCherries={totalCherries}
         onWatchAd={handleWatchAd}
+        isLoading={isLoading}
       />
 
-      {/* 核心采摘区域 */}
       <div
         style={{
           flex: 1,
@@ -156,7 +141,6 @@ export default function FarmScene() {
           justifyContent: 'center',
           width: '100%',
           padding: '20px',
-          // 半透明背景，突出内容
           backgroundColor: 'rgba(15, 23, 42, 0.6)',
           borderRadius: 16,
           margin: '20px 10px 0',
@@ -166,8 +150,9 @@ export default function FarmScene() {
           user={user}
           totalCherries={totalCherries}
           basePickTimes={CONFIG.BASE_PICK_TIMES}
-          extraPickTimes={extraPickTimes}
+          dailyCounts={dailyCounts}
           onUpdateTotalCherries={handleUpdateTotalCherries}
+          isLoading={isLoading}
         />
       </div>
     </div>
