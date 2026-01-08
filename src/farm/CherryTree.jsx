@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTelegramUser } from '../lib/useTelegramUser';
 import { getTodayPickedCount, hasReachedDailyLimit, getTotalCherries, pickCherry } from '../lib/cherryService';
-
+// 在文件顶部添加这行（路径对应你实际的图片位置）
+import CherryTreeImg from '../assets/cherry-tree.png';
 export default function CherryTree() {
   // 业务逻辑完全不变
   const { user, isLoading: isLoadingUser } = useTelegramUser();
@@ -61,21 +62,17 @@ export default function CherryTree() {
 
   return (
     <div style={{ textAlign: 'center', padding: 20, width: '100%', maxWidth: '400px' }}>
-      {/* 樱桃树图标（放大+优化样式） */}
-      <div style={{ fontSize: 80, marginBottom: 20, filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))' }}>
-        🌳
-      </div>
-      
-      {/* 累计樱桃数（突出显示） */}
-      <div style={{ 
-        fontSize: 32, 
-        margin: 16, 
-        color: '#f87171', 
-        fontWeight: 'bold',
-        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
-      }}>
-        🍒 累计樱桃: {totalCherries}
-      </div>
+    {/* 替换后的卡通樱桃树图片 */}
+    <img
+      src={CherryTreeImg}
+      alt="挂满樱桃的树"
+      style={{
+        width: '280px',
+        height: 'auto',
+        marginBottom: 20,
+        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+      }}
+    />
       
       {/* 今日采摘次数提示（简洁样式） */}
       <div style={{ 
