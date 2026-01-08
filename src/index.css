@@ -9,6 +9,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: '#0f172a';
 }
 
 .App {
@@ -17,11 +18,16 @@ body {
   overflow: hidden;
 }
 
-/* 按钮hover效果优化 */
+/* 按钮交互优化 */
 button:hover:not(:disabled) {
   opacity: 0.9;
+  transform: translateY(-2px);
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.98) translateY(0);
+}
+
+button:disabled {
+  opacity: 0.8;
 }
