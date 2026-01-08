@@ -1,186 +1,52 @@
 import { supabase } from './supabaseClient';
 
-// 全局配置（防刷上限）
+// 配置：每日可采摘次数（直接写死，前端简单校验）
 export const CONFIG = {
-  BASE_PICK_TIMES: 5, // 基础采摘次数
-  MAX_AD_COUNT: 5,    // 每日最多看广告次数
-  MAX_DAILY_PICK: 10, // 每日最大可采摘总数（防刷锁上限）
-  AD_REWARD_TIMES: 1  // 每次广告奖励次数
+  DAILY_PICK_LIMIT: 10 // 每日最多摘10次，前端简单校验
 };
 
-/**
- * 初始化用户数据（无则创建，有则重置今日次数）
- */
-export async function initUserInDB(user) {
-  if (!user?.id) throw new Error('用户ID不能为空');
-  
-  // 先查询用户是否存在
-  const { data: existingUser } = await supabase
-    .from('cherry_users')
-    .select('*')
+// 获取今日已采摘次数（仅统计cherry_picks表）
+export async function getTodayPickedCount(user) {
+  if (!user?.id) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const { count } = await supabase
+    .from('cherry_picks')
+    .select('id', { head: true, count: 'exact' })
     .eq('user_id', user.id)
-    .single();
-
-  if (existingUser) {
-    // 重置今日次数（若跨天）
-    const today = new Date().toISOString().split('T')[0];
-    const userUpdateDate = new Date(existingUser.updated_at).toISOString().split('T')[0];
-    if (userUpdateDate !== today) {
-      await supabase
-        .from('cherry_users')
-        .update({
-          today_picked_count: 0,
-          today_ad_count: 0,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-      return { ...existingUser, today_picked_count: 0, today_ad_count: 0 };
-    }
-    return existingUser;
-  } else {
-    // 新建用户（设置防刷上限）
-    const { data: newUser } = await supabase
-      .from('cherry_users')
-      .insert([
-        {
-          user_id: user.id,
-          username: user.username || '未知用户',
-          total_cherries: 0,
-          today_picked_count: 0,
-          today_ad_count: 0,
-          max_daily_pick: CONFIG.MAX_DAILY_PICK
-        }
-      ])
-      .select()
-      .single();
-    return newUser;
-  }
+    .eq('picked_at', today);
+  return count || 0;
 }
 
+// 采摘樱桃（仅插入记录，无防刷校验）
 export async function pickCherry(user) {
-  if (!user?.id) throw new Error('用户信息无效（未获取到Telegram ID）');
-
-  // 关键修复1：每次采摘前，强制读取数据库最新的用户数据（而非初始化的旧数据）
-  const latestUserData = await initUserInDB(user);
+  if (!user?.id) throw new Error('请在Telegram中打开应用');
   
-  // 关键修复2：用最新的数据库次数做防刷校验
-  if (latestUserData.today_picked_count >= latestUserData.max_daily_pick) {
-    throw new Error(`今日已达最大采摘次数（${latestUserData.max_daily_pick}次），明天再来吧！`);
+  // 前端简单校验（可选，防止误点）
+  const todayCount = await getTodayPickedCount(user);
+  if (todayCount >= CONFIG.DAILY_PICK_LIMIT) {
+    throw new Error(`今日已摘${CONFIG.DAILY_PICK_LIMIT}次，明天再来吧～`);
   }
 
-  try {
-    // 更新数据库（用最新的次数+1，避免旧值覆盖）
-    const { error: updateError } = await supabase
-      .from('cherry_users')
-      .update({
-        today_picked_count: latestUserData.today_picked_count + 1,
-        total_cherries: latestUserData.total_cherries + 1,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', user.id)
-      // 关键修复3：数据库层面加条件，仅当未达上限时才更新（双重保险）
-      .lt('today_picked_count', latestUserData.max_daily_pick);
+  // 仅插入采摘记录（核心逻辑）
+  const today = new Date().toISOString().slice(0, 10);
+  await supabase.from('cherry_picks').insert([
+    { user_id: user.id, username: user.username, picked_at: today }
+  ]);
 
-    if (updateError) {
-      console.error('采摘更新失败:', updateError);
-      throw new Error(`数据库更新失败：${updateError.message}`);
-    }
-
-    // 兼容原有逻辑：插入采摘记录到cherry_picks表
-    const today = new Date().toISOString().slice(0, 10);
-    await supabase.from('cherry_picks').insert([
-      { user_id: user.id, username: user.username, picked_at: today }
-    ]);
-
-    // 返回最新累计樱桃数
-    const { data: updatedUser } = await supabase
-      .from('cherry_users')
-      .select('total_cherries, today_picked_count')
-      .eq('user_id', user.id)
-      .single();
-    
-    return updatedUser.total_cherries;
-  } catch (error) {
-    if (error.message.includes('permission denied')) {
-      throw new Error('采摘失败：数据库权限不足（请关闭RLS）');
-    } else if (error.message.includes('no such table')) {
-      throw new Error('采摘失败：缺少cherry_users表（请先创建表）');
-    } else {
-      throw new Error(`采摘失败：${error.message}`);
-    }
-  }
+  // 返回累计樱桃数
+  const { count } = await supabase
+    .from('cherry_picks')
+    .select('id', { head: true, count: 'exact' })
+    .eq('user_id', user.id);
+  return count || 0;
 }
 
-/**
- * 看广告增加采摘次数（带防刷校验）
- */
-export async function watchAdAddPickTimes(user) {
-  const userData = await initUserInDB(user);
-  
-  // 防刷校验1：是否超过每日最大广告次数
-  if (userData.today_ad_count >= CONFIG.MAX_AD_COUNT) {
-    throw new Error(`今日已看${CONFIG.MAX_AD_COUNT}次广告，明天再来吧！`);
-  }
-
-  // 防刷校验2：广告奖励后是否超过最大采摘总数
-  const newAdCount = userData.today_ad_count + 1;
-  const newMaxPick = CONFIG.BASE_PICK_TIMES + newAdCount * CONFIG.AD_REWARD_TIMES;
-  if (newMaxPick > userData.max_daily_pick) {
-    throw new Error(`广告奖励后次数将超过每日上限（${userData.max_daily_pick}次），无法继续看广告！`);
-  }
-
-  // 更新数据库广告次数
-  const { data: updatedUser } = await supabase
-    .from('cherry_users')
-    .update({
-      today_ad_count: newAdCount,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', user.id)
-    .select('today_ad_count')
-    .single();
-
-  return {
-    adCount: updatedUser.today_ad_count,
-    extraPickTimes: updatedUser.today_ad_count * CONFIG.AD_REWARD_TIMES
-  };
-}
-
-/**
- * 获取用户今日采摘/广告次数（从数据库读取，防刷核心）
- */
-export async function getUserDailyCounts(user) {
-  const userData = await initUserInDB(user);
-  return {
-    todayPickedCount: userData.today_picked_count,
-    todayAdCount: userData.today_ad_count,
-    maxDailyPick: userData.max_daily_pick,
-    extraPickTimes: userData.today_ad_count * CONFIG.AD_REWARD_TIMES
-  };
-}
-
-/**
- * 获取累计樱桃数（从数据库读取）
- */
+// 获取累计樱桃数
 export async function getTotalCherries(user) {
-  const userData = await initUserInDB(user);
-  return userData.total_cherries;
+  if (!user?.id) return 0;
+  const { count } = await supabase
+    .from('cherry_picks')
+    .select('id', { head: true, count: 'exact' })
+    .eq('user_id', user.id);
+  return count || 0;
 }
-
-// 可选：创建Supabase RPC函数（提升事务安全性，防刷关键）
-// 执行以下SQL在Supabase控制台：
-/*
-CREATE OR REPLACE FUNCTION update_pick_count(p_user_id BIGINT, p_today TEXT)
-RETURNS VOID AS $$
-BEGIN
-  UPDATE cherry_users
-  SET 
-    today_picked_count = today_picked_count + 1,
-    total_cherries = total_cherries + 1,
-    updated_at = NOW()
-  WHERE 
-    user_id = p_user_id 
-    AND today_picked_count < max_daily_pick;
-END;
-$$ LANGUAGE plpgsql;
-*/
