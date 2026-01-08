@@ -1,71 +1,75 @@
 import { useEffect, useState } from 'react'
 import { useTelegramUser } from '../lib/useTelegramUser'
-import { hasPickedToday, pickCherry } from '../lib/cherryService'
+import { hasPickedToday, pickCherry, getTotalCherries } from '../lib/cherryService' // 新增 getTotalCherries
 
 export default function CherryTree() {
-  const [user, setUser] = useState(null)
+  const user = useTelegramUser()  // ✅ 直接调用 hook
   const [picked, setPicked] = useState(false)
   const [cherries, setCherries] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  // 获取 Telegram 用户信息
-  useEffect(() => {
-    const tgUser = useTelegramUser()
-    setUser(tgUser)
-  }, [])
-
-  // 查询今天是否已摘
+  // 查询今天是否已摘及总樱桃数
   useEffect(() => {
     if (!user) {
       setLoading(false)
       return
     }
 
-    let alive = true
+    let isMounted = true
 
-    async function checkPicked() {
-      const result = await hasPickedToday(user)
-      if (alive) setPicked(result)
-
-      // 同步显示总樱桃数
-      const total = await fetchTotalCherries(user)
-      if (alive) setCherries(total)
-
-      setLoading(false)
+    async function fetchData() {
+      try {
+        // 并行请求，提高性能
+        const [hasPicked, total] = await Promise.all([
+          hasPickedToday(user),
+          getTotalCherries(user)  // 新增函数，获取总樱桃数
+        ])
+        
+        if (isMounted) {
+          setPicked(hasPicked)
+          setCherries(total)
+        }
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        if (isMounted) {
+          setPicked(false)
+          setCherries(0)
+        }
+      } finally {
+        if (isMounted) setLoading(false)
+      }
     }
 
-    checkPicked()
-    return () => (alive = false)
+    fetchData()
+    return () => { isMounted = false }
   }, [user])
-
-  async function fetchTotalCherries(user) {
-    const { count, error } = await pickCherryCount(user)
-    return count ?? 0
-  }
-
-  // 新增函数: 只获取总樱桃数，不插入
-  async function pickCherryCount(user) {
-    const { count, error } = await import('../lib/supabaseClient').then(m =>
-      m.supabase
-        .from('cherry_picks')
-        .select('id', { head: true, count: 'exact' })
-        .eq('user_id', user.id)
-    )
-    return { count, error }
-  }
 
   async function handlePick() {
     if (!user || picked || loading) return
 
     setLoading(true)
     try {
-      const total = await pickCherry(user)
-      setCherries(total)
+      const newTotal = await pickCherry(user)
+      setCherries(newTotal)
       setPicked(true)
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      console.error('Failed to pick cherry:', error)
+      alert('摘樱桃失败，请稍后重试')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
+  }
+
+  // 如果 user 不存在，显示提示
+  if (!loading && !user) {
+    return (
+      <div style={{ textAlign: 'center', padding: 20 }}>
+        <div style={{ fontSize: 48 }}>🌳</div>
+        <p style={{ color: '#ef4444' }}>
+          请在 Telegram 中打开此应用
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -84,6 +88,8 @@ export default function CherryTree() {
           backgroundColor: picked ? '#64748b' : '#dc2626',
           color: 'white',
           border: 'none',
+          transition: 'all 0.3s',
+          opacity: loading || picked || !user ? 0.6 : 1,
         }}
       >
         {loading ? '加载中...' : picked ? '今日已摘' : '摘樱桃'}

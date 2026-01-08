@@ -1,17 +1,33 @@
-// 获取 Telegram 用户信息
+import { useState, useEffect } from 'react'
+
+/**
+ * 获取 Telegram 用户信息的 Hook
+ */
 export function useTelegramUser() {
-  const getUser = () => {
-    if (typeof window === 'undefined') return null
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    // 确保在客户端执行
+    if (typeof window === 'undefined') return
+
     const tg = window.Telegram?.WebApp
-    if (!tg) return null
+    if (!tg) {
+      console.warn('Telegram WebApp not found')
+      return
+    }
 
+    // 初始化 Telegram WebApp
     tg.ready()
+    tg.expand()  // 建议展开应用以使用全屏
 
-    const id = tg.initDataUnsafe?.user?.id
-    const username = tg.initDataUnsafe?.user?.username
-    if (!id) return null
-    return { id, username }
-  }
+    const userData = tg.initDataUnsafe?.user
+    if (userData?.id) {
+      setUser({
+        id: userData.id,
+        username: userData.username || `用户${userData.id}`
+      })
+    }
+  }, [])
 
-  return getUser()
+  return user
 }
