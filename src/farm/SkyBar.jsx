@@ -14,7 +14,7 @@ export default function SkyBar({ totalCherries }) {
       }}
     >
       {/* 左侧标题 */}
-      <h1 style={{ color: '#f87171', margin: 0, fontSize: 22, fontWeight: 600 }}>🍒 樱桃农场</h1>
+      <h1 style={{ color: '#f87171', margin: 0, fontSize: 22, fontWeight: 600 }}>🍒 </h1>
       
       {/* 右侧：显示累计樱桃数 */}
       <div style={{
