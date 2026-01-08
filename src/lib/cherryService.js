@@ -57,50 +57,50 @@ export async function initUserInDB(user) {
   }
 }
 
-// 替换src/lib/cherryService.js中的pickCherry函数
 export async function pickCherry(user) {
   if (!user?.id) throw new Error('用户信息无效（未获取到Telegram ID）');
+
+  // 关键修复1：每次采摘前，强制读取数据库最新的用户数据（而非初始化的旧数据）
+  const latestUserData = await initUserInDB(user);
   
-  // 1. 先初始化用户（确保用户在cherry_users表中）
-  const userData = await initUserInDB(user);
-  
-  // 2. 防刷校验：是否超过每日最大次数
-  if (userData.today_picked_count >= userData.max_daily_pick) {
-    throw new Error(`今日已达最大采摘次数（${userData.max_daily_pick}次），明天再来吧！`);
+  // 关键修复2：用最新的数据库次数做防刷校验
+  if (latestUserData.today_picked_count >= latestUserData.max_daily_pick) {
+    throw new Error(`今日已达最大采摘次数（${latestUserData.max_daily_pick}次），明天再来吧！`);
   }
 
   try {
-    // 3. 直接更新数据库（替换RPC调用，更易排查）
+    // 更新数据库（用最新的次数+1，避免旧值覆盖）
     const { error: updateError } = await supabase
       .from('cherry_users')
       .update({
-        today_picked_count: userData.today_picked_count + 1,
-        total_cherries: userData.total_cherries + 1,
+        today_picked_count: latestUserData.today_picked_count + 1,
+        total_cherries: latestUserData.total_cherries + 1,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      // 关键修复3：数据库层面加条件，仅当未达上限时才更新（双重保险）
+      .lt('today_picked_count', latestUserData.max_daily_pick);
 
     if (updateError) {
       console.error('采摘更新失败:', updateError);
       throw new Error(`数据库更新失败：${updateError.message}`);
     }
 
-    // 4. 兼容原有逻辑：插入采摘记录到cherry_picks表
+    // 兼容原有逻辑：插入采摘记录到cherry_picks表
     const today = new Date().toISOString().slice(0, 10);
     await supabase.from('cherry_picks').insert([
       { user_id: user.id, username: user.username, picked_at: today }
     ]);
 
-    // 5. 返回最新累计樱桃数
+    // 返回最新累计樱桃数
     const { data: updatedUser } = await supabase
       .from('cherry_users')
-      .select('total_cherries')
+      .select('total_cherries, today_picked_count')
       .eq('user_id', user.id)
       .single();
     
     return updatedUser.total_cherries;
   } catch (error) {
-    // 简化错误提示，方便排查
     if (error.message.includes('permission denied')) {
       throw new Error('采摘失败：数据库权限不足（请关闭RLS）');
     } else if (error.message.includes('no such table')) {
