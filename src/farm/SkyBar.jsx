@@ -25,7 +25,7 @@ export default function SkyBar({ totalCherries }) {
         fontSize: 18,
         fontWeight: 500
       }}>
-        <span>🍒</span>
+        <span></span>
         <span>{totalCherries}</span>
       </div>
     </div>
