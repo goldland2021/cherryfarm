@@ -1,55 +1,57 @@
-import { useState, useEffect } from 'react'
-import { getTelegramUser, isInTelegram } from './telegram'
+import { useState, useEffect } from 'react';
 
 /**
- * 自定义 Hook: 获取 Telegram 用户信息
+ * React 自定义钩子：获取 Telegram Mini App 用户信息
+ * @returns { {id: number, username: string} | null } Telegram 用户信息（null 表示未获取到）
  */
 export function useTelegramUser() {
-  const [user, setUser] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isInTelegramEnv, setIsInTelegramEnv] = useState(false)
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkTelegram = async () => {
-      setIsLoading(true)
-      
-      // 检查是否在 Telegram 环境中
-      const inTelegram = isInTelegram()
-      setIsInTelegramEnv(inTelegram)
+    // 初始化 Telegram Mini App
+    const initTelegram = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        
+        const tg = window.Telegram?.WebApp;
+        if (!tg) {
+          throw new Error('未检测到 Telegram Mini App 环境');
+        }
 
-      if (inTelegram) {
-        // 如果在 Telegram 中，获取用户信息
-        const tgUser = getTelegramUser()
-        setUser(tgUser)
-      } else {
-        // 不在 Telegram 中，设置模拟用户用于开发
-        setUser(getMockUser())
+        // 仅调用一次 ready() 初始化
+        tg.ready();
+        // 适配 Telegram 样式
+        tg.expand();
+
+        // 获取用户信息（initDataUnsafe 需确保 Mini App 配置了允许获取用户信息）
+        const tgUser = tg.initDataUnsafe?.user;
+        if (!tgUser?.id) {
+          throw new Error('无法获取 Telegram 用户ID，请授权后重试');
+        }
+
+        setUser({
+          id: tgUser.id,
+          username: tgUser.username || '未知用户'
+        });
+      } catch (error) {
+        console.error('获取 Telegram 用户信息失败:', error);
+        alert(`用户信息加载失败：${error.message}`);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      setIsLoading(false)
-    }
+    initTelegram();
 
-    checkTelegram()
-  }, [])
+    // 清理函数：处理 Telegram Mini App 生命周期
+    return () => {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.close(); // 可选：组件卸载时关闭 Mini App
+      }
+    };
+  }, []);
 
-  return {
-    user,
-    isLoading,
-    isInTelegramEnv,
-    isAuthenticated: !!user
-  }
-}
-
-// 开发环境模拟用户
-function getMockUser() {
-  if (import.meta.env.DEV) {
-    return {
-      id: Math.floor(Math.random() * 1000000),
-      username: `dev_user_${Math.floor(Math.random() * 1000)}`,
-      first_name: 'Development',
-      last_name: 'User',
-      language_code: 'en'
-    }
-  }
-  return null
+  return { user, isLoading };
 }
