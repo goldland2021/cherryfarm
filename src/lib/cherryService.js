@@ -57,42 +57,58 @@ export async function initUserInDB(user) {
   }
 }
 
-/**
- * 采摘樱桃（带防刷校验）
- */
+// 替换src/lib/cherryService.js中的pickCherry函数
 export async function pickCherry(user) {
+  if (!user?.id) throw new Error('用户信息无效（未获取到Telegram ID）');
+  
+  // 1. 先初始化用户（确保用户在cherry_users表中）
   const userData = await initUserInDB(user);
   
-  // 防刷校验：是否超过每日最大次数
+  // 2. 防刷校验：是否超过每日最大次数
   if (userData.today_picked_count >= userData.max_daily_pick) {
     throw new Error(`今日已达最大采摘次数（${userData.max_daily_pick}次），明天再来吧！`);
   }
 
-  // 数据库事务：更新已摘次数 + 累计樱桃数
-  const today = new Date().toISOString().slice(0, 10);
-  const { error: pickError } = await supabase.rpc('update_pick_count', {
-    p_user_id: user.id,
-    p_today: today
-  });
+  try {
+    // 3. 直接更新数据库（替换RPC调用，更易排查）
+    const { error: updateError } = await supabase
+      .from('cherry_users')
+      .update({
+        today_picked_count: userData.today_picked_count + 1,
+        total_cherries: userData.total_cherries + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id);
 
-  if (pickError) {
-    console.error('采摘防刷校验失败:', pickError);
-    throw new Error('采摘失败，系统检测到异常操作！');
+    if (updateError) {
+      console.error('采摘更新失败:', updateError);
+      throw new Error(`数据库更新失败：${updateError.message}`);
+    }
+
+    // 4. 兼容原有逻辑：插入采摘记录到cherry_picks表
+    const today = new Date().toISOString().slice(0, 10);
+    await supabase.from('cherry_picks').insert([
+      { user_id: user.id, username: user.username, picked_at: today }
+    ]);
+
+    // 5. 返回最新累计樱桃数
+    const { data: updatedUser } = await supabase
+      .from('cherry_users')
+      .select('total_cherries')
+      .eq('user_id', user.id)
+      .single();
+    
+    return updatedUser.total_cherries;
+  } catch (error) {
+    // 简化错误提示，方便排查
+    if (error.message.includes('permission denied')) {
+      throw new Error('采摘失败：数据库权限不足（请关闭RLS）');
+    } else if (error.message.includes('no such table')) {
+      throw new Error('采摘失败：缺少cherry_users表（请先创建表）');
+    } else {
+      throw new Error(`采摘失败：${error.message}`);
+    }
   }
-
-  // 插入采摘记录（兼容原有逻辑）
-  await supabase.from('cherry_picks').insert([
-    { user_id: user.id, username: user.username, picked_at: today }
-  ]);
-
-  // 返回最新数据
-  const { data: updatedUser } = await supabase
-    .from('cherry_users')
-    .select('today_picked_count, total_cherries')
-    .eq('user_id', user.id)
-    .single();
-  
-  return updatedUser.total_cherries;
 }
 
 /**
