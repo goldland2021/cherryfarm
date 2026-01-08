@@ -87,3 +87,68 @@ export async function pickCherry(user) {
     throw new Error(`采摘失败：${error.message}`);
   }
 }
+
+// 新增：初始化用户累计数据
+async function initUserTotalCherries(user) {
+  const { data, error } = await supabase
+    .from('cherry_users')
+    .select('total_cherries')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error && error.code === 'PGRST116') { // 无用户记录，创建新记录
+    await supabase.from('cherry_users').insert([
+      { user_id: user.id, username: user.username, total_cherries: 0 }
+    ]);
+    return 0;
+  }
+  return data?.total_cherries || 0;
+}
+
+// 改造：获取累计樱桃数（直接读 total_cherries 字段，更快）
+export async function getTotalCherries(user) {
+  if (!user?.id) return 0;
+  return await initUserTotalCherries(user);
+}
+
+// 改造：采摘樱桃时，直接更新累计数
+export async function pickCherry(user) {
+  if (!user?.id) throw new Error('用户信息无效');
+  const today = getTodayDate();
+
+  // 检查今日是否已摘
+  const { data: userData } = await supabase
+    .from('cherry_users')
+    .select('last_picked_at')
+    .eq('user_id', user.id)
+    .single();
+
+  if (userData?.last_picked_at === today) {
+    throw new Error('今日已采摘过樱桃');
+  }
+
+  // 1. 更新累计樱桃数（+1）
+  const { error: updateError } = await supabase
+    .from('cherry_users')
+    .update({
+      total_cherries: supabase.raw('total_cherries + 1'),
+      last_picked_at: today
+    })
+    .eq('user_id', user.id);
+
+  if (updateError) throw updateError;
+
+  // 2. （可选）仍插入采摘记录，用于溯源
+  await supabase.from('cherry_picks').insert([
+    { user_id: user.id, username: user.username, picked_at: today }
+  ]);
+
+  // 3. 返回最新累计数
+  const { data: newUserData } = await supabase
+    .from('cherry_users')
+    .select('total_cherries')
+    .eq('user_id', user.id)
+    .single();
+
+  return newUserData.total_cherries;
+}
