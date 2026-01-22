@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getTodayPickedCount, pickCherry, CONFIG } from '../lib/cherryService';
 import CherryTreeImg from '../assets/cherry-tree.png';
 
-export default function CherryTree({ user, totalCherries, onUpdateTotalCherries }) {
+export default function CherryTree({ user, onUpdateTotalCherries }) {
   const [todayPickedCount, setTodayPickedCount] = useState(0);
   const [btnLoading, setBtnLoading] = useState(false);
 
@@ -24,7 +24,7 @@ export default function CherryTree({ user, totalCherries, onUpdateTotalCherries 
       const newTotal = await pickCherry(user);
       onUpdateTotalCherries(newTotal);
       setTodayPickedCount(prev => prev + 1);
-      alert('采摘成功！收获1个樱桃～');
+      alert('采摘成功！收1个樱桃～');
     } catch (error) {
       alert(error.message);
     } finally {
