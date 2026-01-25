@@ -24,7 +24,7 @@ export default function CherryTree({ user, onUpdateTotalCherries }) {
       const newTotal = await pickCherry(user);
       onUpdateTotalCherries(newTotal);
       setTodayPickedCount(prev => prev + 1);
-      alert('采摘成功！收1个樱桃～');
+      alert('采摘成功！！收了1个樱桃～');
     } catch (error) {
       alert(error.message);
     } finally {
