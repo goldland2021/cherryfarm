@@ -1,5 +1,5 @@
 import './index.css';
-import FarmScene from './farm/FarmScene';
+import FarmScene from './pages/farmscene';
 
 function App() {
   return (

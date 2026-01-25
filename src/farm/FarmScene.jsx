@@ -1,45 +1,48 @@
+// src/components/FarmScene.jsx
 import { useState, useEffect } from 'react';
 import SkyBar from './SkyBar';
 import CherryTree from './CherryTree';
 import FarmBg from '../assets/farm-bg.png';
-import { supabase } from '../lib/supabaseClient';
 import { getTotalCherries, CONFIG } from '../lib/cherryService';
 
-export default function FarmScene() {
-  const [user, setUser] = useState(null);
+// 纯业务组件：农场樱桃采摘场景，不再包含登录逻辑
+// 接收从TgLogin透传的user和isLoading（登录状态）
+export default function FarmScene({ user, isLoading: loginLoading }) {
+  // 仅保留业务相关状态：累计樱桃数（登录状态由外部传入）
   const [totalCherries, setTotalCherries] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  // 业务加载状态：仅控制自身业务（如获取樱桃数），与登录加载分离
+  const [bizLoading, setBizLoading] = useState(true);
 
-  // 初始化：获取用户+累计樱桃数
+  // 业务初始化：依赖传入的user，用户登录成功后再执行（核心修改）
   useEffect(() => {
-    const init = async () => {
-      try {
-        const tg = window.Telegram?.WebApp;
-        if (!tg || !tg.initDataUnsafe?.user) throw new Error('请在Telegram中打开');
-        const telegramUser = {
-          id: tg.initDataUnsafe.user.id,
-          username: tg.initDataUnsafe.user.username || '未知用户'
-        };
-        setUser(telegramUser);
+    // 若用户未登录/登录中，直接返回
+    if (loginLoading || !user) return;
 
-        // 获取累计樱桃数
-        const total = await getTotalCherries(telegramUser);
+    // 封装业务初始化逻辑：仅获取累计樱桃数（原登录后的业务逻辑）
+    const initFarmBiz = async () => {
+      try {
+        const total = await getTotalCherries(user);
         setTotalCherries(total);
       } catch (error) {
-        alert(`初始化失败：${error.message}`);
+        alert(`农场初始化失败：${error.message}`);
+        console.error('樱桃数获取失败：', error);
       } finally {
-        setIsLoading(false);
+        setBizLoading(false);
       }
     };
-    init();
-  }, []);
 
-  // 更新累计樱桃数
+    initFarmBiz();
+  }, [user, loginLoading]); // 依赖user和loginLoading，登录状态变化时重新执行
+
+  // 合并加载状态：登录加载 + 业务加载，任一未完成则展示加载中
+  const isLoading = loginLoading || bizLoading;
+
+  // 更新累计樱桃数：原逻辑不变，子组件回调同步数据
   const handleUpdateTotalCherries = (newTotal) => {
     setTotalCherries(newTotal);
   };
 
-  // 看广告增加次数（前端简单记录，不用数据库）
+  // 看广告解锁采摘上限：原逻辑不变，仅校验合并后的isLoading
   const handleWatchAd = () => {
     if (isLoading || !user) return;
     const today = new Date().toLocaleDateString();
@@ -61,16 +64,17 @@ export default function FarmScene() {
         date: today,
         count: newAdCount
       }));
-      // 增加每日可采摘上限（前端临时）
       CONFIG.DAILY_PICK_LIMIT = 10 + newAdCount;
       alert(`广告完成！今日可摘上限变为${CONFIG.DAILY_PICK_LIMIT}次～`);
     }, 5000);
   };
 
+  // 加载中：原逻辑不变，合并加载状态控制
   if (isLoading) {
-    return <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', color: '#e5e7eb' }}>加载中...</div>;
+    return <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a', color: '#e5e7eb' }}>农场加载中...</div>;
   }
 
+  // 业务渲染：原逻辑完全不变，仅使用传入的user
   return (
     <div
       style={{
